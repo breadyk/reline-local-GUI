@@ -45,10 +45,12 @@ export function FolderWriterNodeBody({ id }: { id: number }) {
                 title="Select folder"
                 onClick={async () => {
                     try {
-                    const directoryHandle = await window.showDirectoryPicker()
-                    changeValue({ path: directoryHandle.name })
+                        const folderPath = await window.electronAPI.selectFolderPath()
+                        if (folderPath) {
+                            changeValue({ path: folderPath })
+                        }
                     } catch (err) {
-                    console.error("Folder selection cancelled or failed:", err)
+                        console.error("Folder selection cancelled or failed:", err)
                     }
                 }}
             >

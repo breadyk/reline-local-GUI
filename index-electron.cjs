@@ -56,7 +56,18 @@ app.whenReady().then(() => {
     return result.filePaths[0];
   });
 
-  app.on("activate", () => {
+    ipcMain.handle("select-folder-path", async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openDirectory"],
+        })
+
+        if (result.canceled || result.filePaths.length === 0) return null
+
+        return result.filePaths[0]
+    })
+
+
+    app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })

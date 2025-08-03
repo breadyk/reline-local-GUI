@@ -1,10 +1,11 @@
 import type { ConvertToPureFunction, ConvertToStackFunction } from "~/lib/convert/index.ts"
 import type { ScreentoneNodeOptions } from "~/types/options"
-import { NodeType, PureNodeType, ReaderNodeMode } from "~/types/enums.ts"
+import { NodeType, PureNodeType } from "~/types/enums.ts"
 import { DEFAULT_COLLAPSED } from "~/constants.ts"
 
 export const convertScreentoneToPure: ConvertToPureFunction = (nodes, index) => {
   const node = nodes[index]
+  const unwrap = (v: any) => (Array.isArray(v) && v.length === 1 ? v[0] : v)
   const options = node.options as ScreentoneNodeOptions
   return [
     [
@@ -12,7 +13,10 @@ export const convertScreentoneToPure: ConvertToPureFunction = (nodes, index) => 
         type: PureNodeType.HALFTONE,
         options: {
           ...options,
-          halftone_mode: ReaderNodeMode.GRAY,
+          ssaa_filter: options.ssaa_scale !== undefined ? options.ssaa_filter : undefined,
+          dot_size: unwrap(options.dot_size),
+          angle: unwrap(options.angle),
+          dot_type: unwrap(options.dot_type),
         },
       },
     ],

@@ -56,14 +56,26 @@ export enum ResizeType {
 export enum ResizeFilterType {
   NEAREST = "nearest",
   BOX = "box",
+  SBOX4 = "sbox4",
+  SBOX8 = "sbox8",
   LINEAR = "linear",
-  HERMITE = "hermite",
-  CUBIC_CATROM = "cubic_catrom",
-  CUBIC_MITCHELL = "cubic_mitchell",
-  CUBIC_BSPLINE = "cubic_bspline",
+  SLINEAR4 = "slinear4",
+  SLINEAR8 = "slinear8",
+  HAMMING = "hamming",
+  SHAMMING4 = "shamming4",
+  SHAMMING8 = "shamming8",
+  CUBIC_CATROM = "catmullrom",
+  SCATMULLROM4 = "scatmullrom4",
+  SCATMULLROM8 = "scatmullrom8",
+  CUBIC_MITCHELL = "mitchell",
+  SMITCHELL4 = "smitchell4",
+  SMITCHELL8 = "smitchell8",
   LANCZOS = "lanczos",
-  LAGRANGE = "lagrange",
+  SLANCZOS4 = "slanczos4",
+  SLANCZOS8 = "slanczos8",
   GAUSS = "gauss",
+  SGAUSS4 = "sgauss4",
+  SGAUSS8 = "sgauss8"
 }
 
 export enum CannyType {
@@ -83,4 +95,11 @@ export enum DType {
   F32 = "F32",
   F16 = "F16",
   BF16 = "BF16",
+}
+
+export enum HalftoneMode {
+  GRAY = "gray",
+  RGB = "rgb",
+  HSV = "hsv",
+  CMYK = "cmyk"
 }
