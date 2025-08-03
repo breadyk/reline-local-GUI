@@ -1,4 +1,4 @@
-import { useContext } from "react"
+import {useContext, useEffect} from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts.ts"
 import { Label } from "../ui/label"
 import { Input } from "../ui/input"
@@ -7,11 +7,22 @@ import { NodesActionType } from "~/types/actions.ts"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select.tsx"
 import { DotType, HalftoneMode, ResizeFilterType } from "~/types/enums.ts"
 import { NumberInput } from "~/components/ui/number-input.tsx"
+import {DEFAULT_HALFTONE_SSAA_FILTER} from "~/constants";
 
 export function ScreentoneNodeBody({ id }: { id: number }) {
     const nodes = useContext(NodesContext)
     const node = nodes[id]
     const options = node.options as ScreentoneNodeOptions
+    useEffect(() => {
+        const needsPatch =
+            options.ssaa_filter === undefined
+
+        if (needsPatch) {
+            changeValue({
+                ssaa_filter: options.ssaa_filter ?? DEFAULT_HALFTONE_SSAA_FILTER,
+            })
+        }
+    }, [])
     const dispatch = useContext(NodesDispatchContext)
     const changeValue = (newOptions: Partial<ScreentoneNodeOptions>) => {
         dispatch({

@@ -13,7 +13,8 @@ export const convertScreentoneToPure: ConvertToPureFunction = (nodes, index) => 
         type: PureNodeType.HALFTONE,
         options: {
           ...options,
-          ssaa_filter: options.ssaa_scale !== undefined ? options.ssaa_filter : undefined,
+          ssaa_scale: options.ssaa_scale ? options.ssaa_scale : undefined,
+          ssaa_filter: options.ssaa_scale ? options.ssaa_filter : undefined,
           dot_size: unwrap(options.dot_size),
           angle: unwrap(options.angle),
           dot_type: unwrap(options.dot_type),
@@ -23,7 +24,7 @@ export const convertScreentoneToPure: ConvertToPureFunction = (nodes, index) => 
     index + 1,
   ]
 }
-// todo halftone
+
 export const convertHalftoneToStack: ConvertToStackFunction = (nodes, index) => {
   const node = nodes[index]
   const options = node.options as ScreentoneNodeOptions

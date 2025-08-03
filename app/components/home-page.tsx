@@ -168,7 +168,7 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <div className="text-muted-foreground text-sm">dev-build-0.0.1</div>
+                    <div className="text-muted-foreground text-sm">dev-build-v-0.7.0</div>
                 </div>
             </footer>
             {showLogModal && (

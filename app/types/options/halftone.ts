@@ -1,7 +1,6 @@
 import { z } from "zod"
 import {DotType, HalftoneMode, ResizeFilterType} from "~/types/enums.ts"
 
-// todo
 export interface PureHalftoneNodeOptions {
   dot_size: number | number[]
   angle: number | number[]
