@@ -76,5 +76,4 @@ in projects root.
 ```npm run go``` <br>
 в корневой папке проекта.
 
----
 
