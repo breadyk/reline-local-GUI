@@ -5,16 +5,28 @@ import { nodesReducer } from "~/context/reducer"
 import { DEFAULT_NODES, STORAGE_KEY } from "~/constants"
 import { CodeSection } from "~/components/code-section"
 import { NodesSection } from "~/components/nodes-section"
-import { Button, buttonVariants } from "~/components/ui/button"
+import { Button } from "~/components/ui/button"
 import { Play, Square, LoaderCircle } from "lucide-react"
-import { nodesToString } from "~/lib/utils"
-import { cn } from "~/lib/utils"
+import { nodesToString, cn } from "~/lib/utils"
 import { Progress } from "~/components/ui/progress"
+import { DependencyManagerModal } from "~/components/dependency-manager-modal"
+import { LogDialog } from "~/components/log-dialog"
+import { Dialog } from "~/components/ui/dialog"
 
 export default function HomePage() {
     const setModels = useSetModels()
     const [showLogModal, setShowLogModal] = useState(false)
     const [logLines, setLogLines] = useState<string[]>([])
+
+    const [showInstallModal, setShowInstallModal] = useState(false)
+    const [installLogs, setInstallLogs] = useState<string[]>([])
+    const [installing, setInstalling] = useState(false)
+
+    useEffect(() => {
+        window.electronAPI.onPipelineOutput((data: string) => {
+            setInstallLogs((prev) => [...prev, ...data.trim().split("\n")])
+        })
+    }, [])
 
     const getInitialData = () => {
         if (typeof window === "undefined") return DEFAULT_NODES
@@ -48,7 +60,9 @@ export default function HomePage() {
             const lastLine = newLines.at(-1)?.trim()
             if (!lastLine) return
 
-            const match = lastLine.match(/(\d+)%\|[^\|]*\|\s+(\d+\/\d+)\s+(\[.+\])/)
+            const match = lastLine.match(
+                /(\d+)%\|[^\|]*\|\s+(\d+\/\d+)\s+(\[.+\])/,
+            )
             if (match) {
                 const [, percent, steps, timing] = match
                 setProgressText(`${percent}% ${steps} ${timing}`)
@@ -58,9 +72,13 @@ export default function HomePage() {
             }
         }
 
-
-
-        const handleEnd = ({ success, interrupted }: { success: boolean, interrupted?: boolean }) => {
+        const handleEnd = ({
+                               success,
+                               interrupted,
+                           }: {
+            success: boolean
+            interrupted?: boolean
+        }) => {
             setIsRunning(false)
 
             if (interrupted) {
@@ -74,12 +92,9 @@ export default function HomePage() {
             }
         }
 
-
         window.electronAPI.onPipelineOutput(handleOutput)
         window.electronAPI.onPipelineEnd(handleEnd)
     }, [isRunning])
-
-
 
     const handleStart = async () => {
         try {
@@ -101,8 +116,13 @@ export default function HomePage() {
 
     return (
         <main className="h-screen flex flex-col">
-            <header className="p-5">
-                <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Reline Local GUI</h1>
+            <header className="p-5 flex justify-between items-center">
+                <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
+                    Reline Local GUI
+                </h1>
+                <Button variant="outline" onClick={() => setShowInstallModal(true)}>
+                    Install dependencies
+                </Button>
             </header>
 
             <div className="flex-1 overflow-hidden px-5">
@@ -129,12 +149,17 @@ export default function HomePage() {
                             title={isRunning ? "Running..." : "Start Reline"}
                             className={cn(
                                 "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
-                                isRunning && "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once"
+                                isRunning &&
+                                "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
                             )}
                             onClick={handleStart}
                             disabled={isRunning}
                         >
-                            {isRunning ? <LoaderCircle className="animate-spin" /> : <Play className="text-green-600" />}
+                            {isRunning ? (
+                                <LoaderCircle className="animate-spin" />
+                            ) : (
+                                <Play className="text-green-600" />
+                            )}
                         </Button>
 
                         <Button
@@ -145,10 +170,13 @@ export default function HomePage() {
                             disabled={!isRunning}
                             className={cn(
                                 "border-neutral-500 text-neutral-500 bg-neutral-500/10 hover:bg-neutral-500/20",
-                                isRunning && "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20"
+                                isRunning &&
+                                "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20",
                             )}
                         >
-                            <Square className={cn(isRunning ? "text-red-600" : "text-neutral-500")} />
+                            <Square
+                                className={cn(isRunning ? "text-red-600" : "text-neutral-500")}
+                            />
                         </Button>
 
                         <Progress value={progressPercent} className="h-2 w-48" />
@@ -164,36 +192,15 @@ export default function HomePage() {
                                     Show Logs
                                 </Button>
                             )}
-
                         </div>
                     </div>
 
                     <div className="text-muted-foreground text-sm">dev-build-v-0.7.0</div>
                 </div>
             </footer>
-            {showLogModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border border-border">
-                        {/* Header */}
-                        <div className="px-4 py-3 border-b border-border bg-zinc-100 dark:bg-zinc-800">
-                            <h2 className="text-lg font-semibold">Error Logs</h2>
-                        </div>
 
-                        {/* Log content */}
-                        <div className="flex-1 overflow-auto p-4 text-sm text-muted-foreground whitespace-pre-wrap break-words bg-white dark:bg-zinc-900">
-                            {logLines.join("\n")}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-4 py-3 border-t border-border bg-zinc-100 dark:bg-zinc-800 flex justify-end">
-                            <Button variant="outline" onClick={() => setShowLogModal(false)}>
-                                Close
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines} />
+            <DependencyManagerModal open={showInstallModal} onClose={() => setShowInstallModal(false)} />
         </main>
     )
 }

@@ -8,4 +8,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     stopPythonPipeline: () => ipcRenderer.invoke("stop-python-pipeline"),
     onPipelineOutput: (callback) => ipcRenderer.on("pipeline-output", (_event, data) => callback(data)),
     onPipelineEnd: (callback) => ipcRenderer.once("pipeline-end", (_event, data) => callback(data)),
+    installDependency: (id) => ipcRenderer.invoke("install-dependency", id),
+    clearUVCache: () => ipcRenderer.invoke("clear-uv-cache"),
+    checkDependencies: () => ipcRenderer.invoke("check-dependencies"),
+    deleteVenv: () => ipcRenderer.invoke("delete-venv"),
+    getVenvSize: () => ipcRenderer.invoke("get-venv-size"),
+    checkGPU: () => ipcRenderer.invoke("check-gpu"),
 });

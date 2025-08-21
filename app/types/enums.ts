@@ -81,6 +81,7 @@ export enum ResizeFilterType {
 export enum CannyType {
   NORMAL = "normal",
   INVERT = "invert",
+  UNSHARP = "unsharp",
 }
 
 export enum DotType {

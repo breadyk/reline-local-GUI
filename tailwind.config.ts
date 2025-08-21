@@ -70,12 +70,35 @@ export default {
             height: "0",
           },
         },
+        "slow-pulse": {
+          "0%, 100%": {
+            backgroundColor: "hsl(var(--background))", // Базовый фон
+          },
+          "50%": {
+            backgroundColor: "var(--yellow-100, #fefcbf)", // Бледно-жёлтый
+            opacity: "0.8"
+          },
+        },
+        "green-pulse": {
+          "0%, 100%": {
+            backgroundColor: "hsl(var(--background))", // Базовый фон
+            borderColor: "hsl(var(--border))", // Базовая обводка
+            opacity: "1"
+          },
+          "50%": {
+            backgroundColor: "var(--green-100, #d1fae5)", // Бледно-зелёный
+            borderColor: "#22c55e", // Ярко-зелёный (green-500)
+            opacity: "0.6"
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "slow-pulse": "slow-pulse 3s ease-in-out infinite", // Жёлтый пульс, 3 секунды
+        "green-pulse": "green-pulse 1.5s ease-in-out 1", // Зелёный пульс, 1 цикл
       },
     },
   },
-  plugins: [tailwindcssAnimate, require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config
