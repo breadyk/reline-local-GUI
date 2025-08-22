@@ -6,7 +6,7 @@ import { DEFAULT_NODES, STORAGE_KEY } from "~/constants"
 import { CodeSection } from "~/components/code-section"
 import { NodesSection } from "~/components/nodes-section"
 import { Button } from "~/components/ui/button"
-import { Play, Square, LoaderCircle } from "lucide-react"
+import { Play, Square, LoaderCircle, Download } from "lucide-react"
 import { nodesToString, cn } from "~/lib/utils"
 import { Progress } from "~/components/ui/progress"
 import { DependencyManagerModal } from "~/components/dependency-manager-modal"
@@ -17,16 +17,36 @@ export default function HomePage() {
     const setModels = useSetModels()
     const [showLogModal, setShowLogModal] = useState(false)
     const [logLines, setLogLines] = useState<string[]>([])
-
     const [showInstallModal, setShowInstallModal] = useState(false)
     const [installLogs, setInstallLogs] = useState<string[]>([])
     const [installing, setInstalling] = useState(false)
+    const [dependenciesInstalled, setDependenciesInstalled] = useState(false)
+
+    const checkDependencies = async () => {
+        try {
+            const { uv, venv } = await window.electronAPI.checkDependencies()
+            setDependenciesInstalled(uv && venv)
+        } catch (err) {
+            console.error("Error checking dependencies:", err)
+            setDependenciesInstalled(false)
+        }
+    }
 
     useEffect(() => {
         window.electronAPI.onPipelineOutput((data: string) => {
             setInstallLogs((prev) => [...prev, ...data.trim().split("\n")])
         })
     }, [])
+
+    useEffect(() => {
+        checkDependencies()
+    }, [])
+
+    useEffect(() => {
+        if (!isRunning) {
+            setProgressText(dependenciesInstalled ? "Ready to go!" : "Install dependencies")
+        }
+    }, [dependenciesInstalled])
 
     const getInitialData = () => {
         if (typeof window === "undefined") return DEFAULT_NODES
@@ -36,7 +56,7 @@ export default function HomePage() {
 
     const [nodes, dispatch] = useReducer(nodesReducer, getInitialData())
     const [isRunning, setIsRunning] = useState(false)
-    const [progressText, setProgressText] = useState("")
+    const [progressText, setProgressText] = useState(dependenciesInstalled ? "Ready to go!" : "Install dependencies")
     const outputRef = useRef("")
 
     useEffect(() => {
@@ -97,6 +117,10 @@ export default function HomePage() {
     }, [isRunning])
 
     const handleStart = async () => {
+        if (!dependenciesInstalled) {
+            setShowInstallModal(true)
+            return
+        }
         try {
             const json = JSON.parse(nodesToString(nodes))
             await window.electronAPI.runPythonPipeline(json)
@@ -120,8 +144,13 @@ export default function HomePage() {
                 <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
                     Reline Local GUI
                 </h1>
-                <Button variant="outline" onClick={() => setShowInstallModal(true)}>
-                    Install dependencies
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowInstallModal(true)}
+                    title="Install dependencies"
+                >
+                    <Download className="h-5 w-5" />
                 </Button>
             </header>
 
@@ -146,19 +175,21 @@ export default function HomePage() {
                         <Button
                             variant="outline"
                             size="icon"
-                            title={isRunning ? "Running..." : "Start Reline"}
+                            title={isRunning ? "Running..." : dependenciesInstalled ? "Start Reline" : "Dependencies required"}
                             className={cn(
                                 "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
                                 isRunning &&
                                 "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
+                                !dependenciesInstalled && !isRunning &&
+                                "border-gray-500 text-gray-600 bg-gray-500/10 hover:bg-gray-500/20 opacity-50 cursor-not-allowed"
                             )}
                             onClick={handleStart}
-                            disabled={isRunning}
+                            disabled={isRunning || !dependenciesInstalled}
                         >
                             {isRunning ? (
                                 <LoaderCircle className="animate-spin" />
                             ) : (
-                                <Play className="text-green-600" />
+                                <Play className={cn(dependenciesInstalled ? "text-green-600" : "text-gray-600")} />
                             )}
                         </Button>
 
@@ -200,7 +231,11 @@ export default function HomePage() {
             </footer>
 
             <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines} />
-            <DependencyManagerModal open={showInstallModal} onClose={() => setShowInstallModal(false)} />
+            <DependencyManagerModal
+                open={showInstallModal}
+                onClose={() => setShowInstallModal(false)}
+                onCloseWithCheck={checkDependencies}
+            />
         </main>
     )
 }

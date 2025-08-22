@@ -63,7 +63,7 @@ export function ModalBase({ open, onClose, children, className }: ModalBaseProps
             {/* content */}
             <div
                 className={cn(
-                    "relative z-50 bg-background border shadow-lg rounded-2xl overflow-hidden transition-all duration-200 ease-out",
+                    "relative z-50 bg-background border shadow-lg rounded-lg overflow-hidden transition-all duration-200 ease-out",
                     show
                         ? "opacity-100 scale-100 translate-y-0"
                         : "opacity-0 scale-95 -translate-y-4",

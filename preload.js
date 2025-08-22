@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     deleteVenv: () => ipcRenderer.invoke("delete-venv"),
     getVenvSize: () => ipcRenderer.invoke("get-venv-size"),
     checkGPU: () => ipcRenderer.invoke("check-gpu"),
+    checkUVPipFreeze: () => ipcRenderer.invoke("check-uv-pip-freeze"),
 });

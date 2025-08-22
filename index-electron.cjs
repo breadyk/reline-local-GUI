@@ -19,10 +19,18 @@ let manuallyStopped = false;
 function runCommand(command, args = [], options = {}, onData = () => {}) {
     return new Promise((resolve, reject) => {
         const child = spawn(command, args, { shell: false, ...options });
-        child.stdout.on("data", (data) => onData(data.toString()));
-        child.stderr.on("data", (data) => onData(data.toString()));
+        let output = "";
+        child.stdout.on("data", (data) => {
+            output += data.toString();
+            onData(data.toString());
+        });
+        child.stderr.on("data", (data) => {
+            output += data.toString();
+            onData(data.toString());
+        });
         child.on("close", (code) => {
-            code === 0 ? resolve() : reject(new Error(`${command} exited with code ${code}`));
+            if (code === 0) resolve(output);
+            else reject(new Error(`${command} exited with code ${code}`));
         });
     });
 }
@@ -123,6 +131,31 @@ ipcMain.handle("check-uv-cache", async () => {
     }
 });
 
+ipcMain.handle("check-uv-pip-freeze", async (event) => {
+    try {
+        const venvPath = path.join(relineDir, ".venv");
+        if (!fs.existsSync(venvPath)) {
+            return { packages: [], error: "Virtual environment not found." };
+        }
+        const uv = uvBinaryPath;
+        const output = await runCommand(uv, ["pip", "freeze"], { cwd: relineDir });
+        // Strip ANSI escape codes
+        const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
+        // Parse standard pip freeze format (name==version)
+        const packages = cleanOutput
+            .split("\n")
+            .filter(line => line.trim() && !line.startsWith("#"))
+            .map(line => {
+                const [name, version] = line.split("==");
+                return { name: name?.trim() || "unknown", version: version?.trim() || "unknown" };
+            })
+            .filter(pkg => pkg.name !== "unknown");
+        return { packages, error: null };
+    } catch (err) {
+        return { packages: [], error: err.message };
+    }
+});
+
 // Venv Management
 ipcMain.handle("delete-venv", async () => {
     const venvPath = path.join(relineDir, ".venv");
@@ -214,7 +247,10 @@ ipcMain.handle("run-python-pipeline", async (event, jsonData) => {
     const tempPath = path.join(relineDir, "data.json");
     fs.writeFileSync(tempPath, JSON.stringify(jsonData, null, 2));
 
-    const pythonPath = path.join(relineDir, ".venv", "Scripts", "python.exe");
+    const venvPath = path.join(relineDir, ".venv");
+    const pythonPath = os.platform() === "win32"
+        ? path.join(venvPath, "Scripts", "python.exe")
+        : path.join(venvPath, "bin", "python");
     const scriptPath = path.join(relineDir, "main.py");
 
     currentChild = spawn(pythonPath, [scriptPath], {

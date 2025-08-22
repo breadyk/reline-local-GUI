@@ -72,22 +72,22 @@ export default {
         },
         "slow-pulse": {
           "0%, 100%": {
-            backgroundColor: "hsl(var(--background))", // Базовый фон
+            backgroundColor: "hsl(var(--background))",
           },
           "50%": {
-            backgroundColor: "var(--yellow-100, #fefcbf)", // Бледно-жёлтый
+            backgroundColor: "var(--yellow-100, #fefcbf)",
             opacity: "0.8"
           },
         },
         "green-pulse": {
           "0%, 100%": {
-            backgroundColor: "hsl(var(--background))", // Базовый фон
-            borderColor: "hsl(var(--border))", // Базовая обводка
+            backgroundColor: "hsl(var(--background))",
+            borderColor: "hsl(var(--border))",
             opacity: "1"
           },
           "50%": {
-            backgroundColor: "var(--green-100, #d1fae5)", // Бледно-зелёный
-            borderColor: "#22c55e", // Ярко-зелёный (green-500)
+            backgroundColor: "var(--green-100, #d1fae5)",
+            borderColor: "#22c55e",
             opacity: "0.6"
           },
         },
@@ -95,8 +95,8 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "slow-pulse": "slow-pulse 3s ease-in-out infinite", // Жёлтый пульс, 3 секунды
-        "green-pulse": "green-pulse 1.5s ease-in-out 1", // Зелёный пульс, 1 цикл
+        "slow-pulse": "slow-pulse 3s ease-in-out infinite",
+        "green-pulse": "green-pulse 1.5s ease-in-out 1",
       },
     },
   },
