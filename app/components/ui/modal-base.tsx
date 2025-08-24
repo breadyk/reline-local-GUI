@@ -13,18 +13,15 @@ export function ModalBase({ open, onClose, children, className }: ModalBaseProps
     const [visible, setVisible] = useState(false)
     const [show, setShow] = useState(false)
 
-    // Устанавливаем mounted после первого рендера
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    // Управление видимостью и анимацией
     useEffect(() => {
         if (!mounted) return
 
         if (open) {
             setVisible(true)
-            // Задержка для обеспечения начального состояния анимации
             const timer = setTimeout(() => setShow(true), 10)
             return () => clearTimeout(timer)
         } else {
@@ -34,7 +31,6 @@ export function ModalBase({ open, onClose, children, className }: ModalBaseProps
         }
     }, [open, mounted])
 
-    // Обработка Escape
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose()

@@ -3,10 +3,8 @@ import type { NodeOptions, PureNode, PureNodeOptions, StackNode } from "~/types/
 import { convertHalftoneToStack, convertScreentoneToPure } from "~/lib/convert/halftone.ts"
 import { convertResizeToPure, convertResizeToStack } from "~/lib/convert/resize.ts"
 import { convertUpscaleToPure, convertUpscaleToStack } from "~/lib/convert/upscale.ts"
-import { convertDownloadToStack } from "~/lib/convert/download.ts"
 import { DEFAULT_COLLAPSED } from "~/constants.ts"
 import { convertFolderReaderToPure, convertFolderReaderToStack } from "~/lib/convert/folder_reader.ts"
-import { convertUnarchiveToStack } from "~/lib/convert/unarchive.ts"
 
 export type ConvertToPureFunction = (nodes: StackNode[], index: number) => [PureNode[], number]
 export type ConvertToStackFunction = (nodes: PureNode[], index: number) => [StackNode[], number]
@@ -51,7 +49,6 @@ const convertToPureMapper: ToPureConvertMapper = {
 }
 const convertToStackMapper: ToStackConvertMapper = {
   [PureNodeType.UPSCALE]: convertUpscaleToStack,
-  [PureNodeType.DOWNLOAD]: convertDownloadToStack,
   [PureNodeType.RESIZE]: convertResizeToStack,
   [PureNodeType.HALFTONE]: convertHalftoneToStack,
   [PureNodeType.CVT_COLOR]: convertEqualsToStack,
@@ -59,7 +56,6 @@ const convertToStackMapper: ToStackConvertMapper = {
   [PureNodeType.FOLDER_WRITER]: convertEqualsToStack,
   [PureNodeType.LEVEL]: convertEqualsToStack,
   [PureNodeType.SHARP]: convertEqualsToStack,
-  [PureNodeType.UNARCHIVE]: convertUnarchiveToStack,
 }
 
 export const convertToPure = (nodes: StackNode[]) => {

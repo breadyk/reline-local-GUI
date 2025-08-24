@@ -29,8 +29,6 @@ export enum PureNodeType {
   UPSCALE = "upscale",
   RESIZE = "resize",
   HALFTONE = "halftone",
-  DOWNLOAD = "download",
-  UNARCHIVE = "unarchive",
 }
 
 export enum CvtType {

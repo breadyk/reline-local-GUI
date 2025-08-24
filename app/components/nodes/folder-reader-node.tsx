@@ -95,15 +95,6 @@ export function FolderReaderNodeBody({ id }: { id: number }) {
         />
         <Label>recursive</Label>
       </div>
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          checked={options.unarchive}
-          onCheckedChange={(value) => {
-            changeValue({ unarchive: !!value })
-          }}
-        />
-        <Label>unarchive</Label>
-      </div>
     </div>
   )
 }

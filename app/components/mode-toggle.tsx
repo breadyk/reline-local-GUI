@@ -1,3 +1,4 @@
+//todo: remake to another theme framework
 import { Moon, Sun } from "lucide-react"
 import { Theme, useTheme } from "remix-themes"
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "~/components/ui"

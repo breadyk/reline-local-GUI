@@ -15,8 +15,6 @@ import type { NodeOptions, StackNode } from "./types/node"
 export const DEFAULT_COLLAPSED = true
 
 export const DEFAULT_MODEL = "select folder"
-export const MODEL_PREFIX = "/content/models/"
-export const MODEL_POSTFIX = ".pth"
 export const STORAGE_KEY = "nodes-data"
 
 export const DEFAULT_TILE_SIZE = 800
@@ -45,13 +43,12 @@ export const DEFAULT_NODE_OPTIONS: {
     gamma: 1,
   },
   folder_reader: {
-    path: "C:/raws",
+    path: "C:\\raws",
     recursive: true,
     mode: ReaderNodeMode.DYNAMIC,
-    unarchive: false,
   },
   folder_writer: {
-    path: "C:/raws/output",
+    path: "C:\\raws\\output",
     format: WriterNodeFormat.PNG,
   },
   cvt_color: {

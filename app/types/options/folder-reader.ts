@@ -7,15 +7,10 @@ export interface PureFolderReaderNodeOptions {
   recursive: boolean
 }
 
-export interface PureUnarchiveNodeOptions {
-  path: string
-}
-
 export const folderReaderOptionsSchema = z.object({
   path: z.string(),
   mode: z.nativeEnum(ReaderNodeMode),
   recursive: z.boolean(),
-  unarchive: z.boolean(),
 })
 
 export type FolderReaderNodeOptions = z.infer<typeof folderReaderOptionsSchema>

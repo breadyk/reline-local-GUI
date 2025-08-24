@@ -58,12 +58,28 @@ export default function HomePage() {
     const [isRunning, setIsRunning] = useState(false)
     const [progressText, setProgressText] = useState(dependenciesInstalled ? "Ready to go!" : "Install dependencies")
     const outputRef = useRef("")
+    const [progressPercent, setProgressPercent] = useState(0)
 
     useEffect(() => {
-        setModels(["model-A", "model-B"])
-    }, [setModels])
+        async function loadInitialModels() {
+            const savedModels = localStorage.getItem("reline_models");
+            if (savedModels) {
+                const { folderPath } = JSON.parse(savedModels);
+                if (folderPath) {
+                    try {
+                        const result = await window.electronAPI.loadModelsFromFolder(folderPath);
+                        if (result && result.models) {
+                            setModels({ folderPath: result.folderPath, models: result.models });
+                        }
+                    } catch (err) {
+                        console.error(`Failed to load models from ${folderPath}`, err);
+                    }
+                }
+            }
+        }
 
-    const [progressPercent, setProgressPercent] = useState(0)
+        loadInitialModels();
+    }, []);
 
     useEffect(() => {
         if (!isRunning) return
@@ -226,7 +242,7 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <div className="text-muted-foreground text-sm">dev-build-v-0.7.0</div>
+                    <div className="text-muted-foreground text-sm">dev-build v-0.9.1</div>
                 </div>
             </footer>
 

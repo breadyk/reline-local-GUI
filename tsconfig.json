@@ -19,6 +19,7 @@
       "~/*": ["./app/*"],
       "@/*": ["./app/*"]
     },
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
   }
 }

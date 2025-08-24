@@ -96,6 +96,8 @@ const createWindow = () => {
         width: 1200,
         height: 800,
         resizable: true,
+        title: "Reline GUI",
+        icon: path.join(__dirname, "app", "public",  "favicon.png"),
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             nodeIntegration: false,
@@ -223,7 +225,13 @@ ipcMain.handle("select-model-folder", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
     if (result.canceled || !result.filePaths.length) return null;
     const folderPath = result.filePaths[0];
-    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth"));
+    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth")).map(f => f.replace(/\.pth$/, ''));
+    return { folderPath, models: modelFiles };
+});
+
+ipcMain.handle("load-models-from-folder", async (event, folderPath) => {
+    if (!fs.existsSync(folderPath)) return null;
+    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth")).map(f => f.replace(/\.pth$/, ''));
     return { folderPath, models: modelFiles };
 });
 
