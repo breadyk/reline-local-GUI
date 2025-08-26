@@ -1,4 +1,4 @@
-import { useContext, useState } from "react"
+import {useContext, useEffect, useState} from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import { ModelsContext, useSetModels, useModels } from "~/context/model-provider"
 import { DType, TilerType } from "~/types/enums"
@@ -18,71 +18,80 @@ import { FolderOpen, File } from "lucide-react"
 
 
 function Combobox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const models = useModels()
-  const setModels = useSetModels()
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" aria-role="combobox" aria-expanded={open} className="w-full justify-between">
-          {value}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
-          <CommandInput placeholder="Search..." />
-          <CommandList>
-            <CommandEmpty>Nothing was found.</CommandEmpty>
-            <CommandGroup>
-              {Object.values(models).map((model) => (
-                <CommandItem
-                  key={model}
-                  value={model}
-                  onSelect={() => {
-                    onChange(model)
-                    setOpen(false)
-                  }}
-                >
-                  <Check className={cn("mr-2 h-4 w-4", value === model ? "opacity-100" : "opacity-0")} />
-                  {model}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
+    const [open, setOpen] = useState(false);
+    const { models } = useModels();
+
+    const displayValue = value === "select folder" ? "Select folder" : value;
+    const isPlaceholder = value === "select folder";
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className={cn("w-full justify-between", isPlaceholder && "text-muted-foreground font-normal")}>
+                    {displayValue}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+                <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList>
+                        <CommandEmpty>No models found.</CommandEmpty>
+                        <CommandGroup>
+                            {Array.isArray(models) && models.length > 0 ? (
+                                models.map((model) => (
+                                    <CommandItem
+                                        key={model}
+                                        value={model}
+                                        onSelect={() => {
+                                            onChange(model);
+                                            setOpen(false);
+                                        }}
+                                    >
+                                        <Check className={cn("mr-2 h-4 w-4", value === model ? "opacity-100" : "opacity-0")} />
+                                        {model}
+                                    </CommandItem>
+                                ))
+                            ) : null}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
 }
 
 export function UpscaleNodeBody({ id }: { id: number }) {
-  const nodes = useContext(NodesContext)
-  const node = nodes[id]
-  const options = node.options as UpscaleNodeOptions
-  const dispatch = useContext(NodesDispatchContext)
-  const models = useContext(ModelsContext)
-  const setModels = useSetModels()
+    const nodes = useContext(NodesContext)
+    const node = nodes[id]
+    const options = node.options as UpscaleNodeOptions
+    const dispatch = useContext(NodesDispatchContext)
+    const { folderPath, models } = useContext(ModelsContext)
+    const setModels = useSetModels()
 
-  const [modelFolderPath, setModelFolderPath] = useState("")
+    useEffect(() => {
+        if (options.model === "select folder" && models.length > 0 && !options.is_own_model) {
+            changeValue({ model: models[0] });
+        }
+    }, [models, options.model, options.is_own_model]);
 
-  const handleChooseFolder = async (setModels: (models: string[]) => void) => {
-      const result = await window.electronAPI.selectModelFolder()
-      if (result && Array.isArray(result.models)) {
-          setModels(result.models)
-          setModelFolderPath(result.folderPath)
-          changeValue({ model_folder_path: result.folderPath })
-      }
-  }
+    const handleChooseFolder = async () => {
+        const result = await window.electronAPI.selectModelFolder();
+        if (result && Array.isArray(result.models)) {
+            setModels({ folderPath: result.folderPath, models: result.models });
+            const defaultModel = result.models[0] || "select folder";
+            changeValue({ model: defaultModel });
+        }
+    };
 
-  const handleChooseFile = async (changeValue: (val: Partial<UpscaleNodeOptions>) => void) => {
+    const handleChooseFile = async (changeValue: (val: Partial<UpscaleNodeOptions>) => void) => {
     const filePath = await window.electronAPI.selectModelFile()
     if (filePath) {
         changeValue({ model: filePath })
     }
-  }
+    }
 
-  const changeValue = (newOptions: Partial<UpscaleNodeOptions>) => {
+    const changeValue = (newOptions: Partial<UpscaleNodeOptions>) => {
     dispatch({
       type: NodesActionType.CHANGE,
       payload: {
@@ -93,7 +102,7 @@ export function UpscaleNodeBody({ id }: { id: number }) {
         },
       },
     })
-  }
+    }
 
   return (
     <div className="flex flex-col gap-5">
@@ -121,21 +130,19 @@ export function UpscaleNodeBody({ id }: { id: number }) {
         ) : (
           <div className="flex items-center gap-2">
               <Combobox
-                value={options.model}
-                onChange={(model) => {
-                  changeValue({
-                    model: model,
-                  })
-                }}
+                  value={options.model}
+                  onChange={(model) => {
+                      changeValue({ model });
+                  }}
               />
               <Button
-                variant="outline"
-                size="icon"
-                type="button"
-                title="Select file"
-                onClick={() => handleChooseFolder(setModels)}
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  title="Select folder"
+                  onClick={handleChooseFolder}
               >
-                <FolderOpen/>
+                  <FolderOpen />
               </Button>
           </div>
         )}
@@ -214,16 +221,19 @@ export function UpscaleNodeBody({ id }: { id: number }) {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox
-          checked={options.is_own_model}
-          onCheckedChange={(value) => {
-            if (!value) {
-              changeValue({ model: models.includes(options.model) ? options.model : DEFAULT_MODEL, is_own_model: value })
-            } else if (value) {
-              changeValue({ model: "", is_own_model: !!value })
-            }
-          }}
-        />
+          <Checkbox
+              checked={options.is_own_model}
+              onCheckedChange={(value) => {
+                  if (!value) {
+                      const selectedModel = models.includes(options.model)
+                          ? options.model
+                          : models[0] || "select folder";
+                      changeValue({ model: selectedModel, is_own_model: value });
+                  } else {
+                      changeValue({ model: "", is_own_model: !!value });
+                  }
+              }}
+          />
         <Label>from file</Label>
       </div>
 

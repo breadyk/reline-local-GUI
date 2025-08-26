@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import { useSetModels } from "~/context/model-provider"
+import { JsonConfigsProvider } from "~/context/json-config-provider" // Added import
 import { nodesReducer } from "~/context/reducer"
 import { DEFAULT_NODES, STORAGE_KEY } from "~/constants"
 import { CodeSection } from "~/components/code-section"
@@ -12,6 +13,7 @@ import { Progress } from "~/components/ui/progress"
 import { DependencyManagerModal } from "~/components/dependency-manager-modal"
 import { LogDialog } from "~/components/log-dialog"
 import { Dialog } from "~/components/ui/dialog"
+import {ModeToggle} from "~/components/mode-toggle.tsx";
 
 export default function HomePage() {
     const setModels = useSetModels()
@@ -155,103 +157,108 @@ export default function HomePage() {
     }
 
     return (
-        <main className="h-screen flex flex-col">
-            <header className="p-5 flex justify-between items-center">
-                <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
-                    Reline Local GUI
-                </h1>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowInstallModal(true)}
-                    title="Install dependencies"
-                >
-                    <Download className="h-5 w-5" />
-                </Button>
-            </header>
-
-            <div className="flex-1 overflow-hidden px-5">
-                <div className="grid grid-cols-2 gap-x-5 h-full">
-                    <NodesContext.Provider value={nodes}>
-                        <NodesDispatchContext.Provider value={dispatch}>
-                            <div className="overflow-y-auto pr-2">
-                                <NodesSection />
-                            </div>
-                            <div className="overflow-y-auto pr-2">
-                                <CodeSection />
-                            </div>
-                        </NodesDispatchContext.Provider>
-                    </NodesContext.Provider>
-                </div>
-            </div>
-
-            <footer className="p-5 border-t border-border">
-                <div className="flex justify-between items-center">
-                    <div className="flex gap-2 items-center">
+        <JsonConfigsProvider> {/* Added provider wrapper */}
+            <main className="h-screen flex flex-col">
+                <header className="p-5 flex justify-between items-center">
+                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
+                        Reline Local GUI
+                    </h1>
+                    <div className="flex gap-2">
+                        <ModeToggle/>
                         <Button
                             variant="outline"
                             size="icon"
-                            title={isRunning ? "Running..." : dependenciesInstalled ? "Start Reline" : "Dependencies required"}
-                            className={cn(
-                                "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
-                                isRunning &&
-                                "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
-                                !dependenciesInstalled && !isRunning &&
-                                "border-gray-500 text-gray-600 bg-gray-500/10 hover:bg-gray-500/20 opacity-50 cursor-not-allowed"
-                            )}
-                            onClick={handleStart}
-                            disabled={isRunning || !dependenciesInstalled}
+                            onClick={() => setShowInstallModal(true)}
+                            title="Install dependencies"
                         >
-                            {isRunning ? (
-                                <LoaderCircle className="animate-spin" />
-                            ) : (
-                                <Play className={cn(dependenciesInstalled ? "text-green-600" : "text-gray-600")} />
-                            )}
+                            <Download className="h-5 w-5" />
                         </Button>
-
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            title="Stop Reline"
-                            onClick={handleStop}
-                            disabled={!isRunning}
-                            className={cn(
-                                "border-neutral-500 text-neutral-500 bg-neutral-500/10 hover:bg-neutral-500/20",
-                                isRunning &&
-                                "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20",
-                            )}
-                        >
-                            <Square
-                                className={cn(isRunning ? "text-red-600" : "text-neutral-500")}
-                            />
-                        </Button>
-
-                        <Progress value={progressPercent} className="h-2 w-48" />
-                        <div className="ml-4 text-sm text-muted-foreground min-w-[200px] truncate">
-                            {progressText}
-                            {progressText === "❌ Error" && (
-                                <Button
-                                    size="sm"
-                                    variant="link"
-                                    className="text-red-500 underline ml-2"
-                                    onClick={() => setShowLogModal(true)}
-                                >
-                                    Show Logs
-                                </Button>
-                            )}
-                        </div>
                     </div>
+                </header>
 
-                    <div className="text-muted-foreground text-sm">dev-build v-0.9.1</div>
+                <div className="flex-1 overflow-hidden px-5">
+                    <div className="grid grid-cols-2 gap-x-5 h-full">
+                        <NodesContext.Provider value={nodes}>
+                            <NodesDispatchContext.Provider value={dispatch}>
+                                <div className="overflow-y-auto pr-2">
+                                    <NodesSection />
+                                </div>
+                                <div className="overflow-y-auto pr-2">
+                                    <CodeSection />
+                                </div>
+                            </NodesDispatchContext.Provider>
+                        </NodesContext.Provider>
+                    </div>
                 </div>
-            </footer>
 
-            <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines} />
-            <DependencyManagerModal
-                open={showInstallModal}
-                onClose={() => setShowInstallModal(false)}
-                onCloseWithCheck={checkDependencies}
-            />
-        </main>
+                <footer className="p-5">
+                    <div className="flex justify-between items-center">
+                        <div className="flex gap-2 items-center">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                title={isRunning ? "Running..." : dependenciesInstalled ? "Start Reline" : "Dependencies required"}
+                                className={cn(
+                                    "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
+                                    isRunning &&
+                                    "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
+                                    !dependenciesInstalled && !isRunning &&
+                                    "border-gray-500 text-gray-600 bg-gray-500/10 hover:bg-gray-500/20 opacity-50 cursor-not-allowed"
+                                )}
+                                onClick={handleStart}
+                                disabled={isRunning || !dependenciesInstalled}
+                            >
+                                {isRunning ? (
+                                    <LoaderCircle className="animate-spin" />
+                                ) : (
+                                    <Play className={cn(dependenciesInstalled ? "text-green-600" : "text-gray-600")} />
+                                )}
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                title="Stop Reline"
+                                onClick={handleStop}
+                                disabled={!isRunning}
+                                className={cn(
+                                    "border-neutral-500 text-neutral-500 bg-neutral-500/10 hover:bg-neutral-500/20",
+                                    isRunning &&
+                                    "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20",
+                                )}
+                            >
+                                <Square
+                                    className={cn(isRunning ? "text-red-600" : "text-neutral-500")}
+                                />
+                            </Button>
+
+                            <Progress value={progressPercent} className="h-2 w-48" />
+                            <div className="ml-4 text-sm text-muted-foreground min-w-[200px] truncate">
+                                {progressText}
+                                {progressText === "❌ Error" && (
+                                    <Button
+                                        size="sm"
+                                        variant="link"
+                                        className="text-red-500 underline ml-2"
+                                        onClick={() => setShowLogModal(true)}
+                                    >
+                                        Show Logs
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="text-muted-foreground text-sm">pre-release-build-v-0.9.2</div>
+                    </div>
+                </footer>
+
+                <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines} />
+                <DependencyManagerModal
+                    open={showInstallModal}
+                    onClose={() => setShowInstallModal(false)}
+                    onCloseWithCheck={checkDependencies}
+                />
+            </main>
+        </JsonConfigsProvider>
     )
 }

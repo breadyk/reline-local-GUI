@@ -1,59 +1,197 @@
 import React, { useContext, useState } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
-import { Check, Copy, FileUp } from "lucide-react"
+import { File, Github, FolderOpen } from "lucide-react"
 import { nodesToString, stringToNodes } from "~/lib/utils"
 import { useToast } from "~/components/ui/use-toast"
-import { Card, CardHeader, Dialog, DialogTrigger, Button, CardContent } from "~/components/ui"
-import { FileUploadDialogContent } from "~/components/file-upload-dialog-content"
+import { Card, CardHeader, CardContent } from "~/components/ui/card"
 import { NodesActionType } from "~/types/actions"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import { Popover, PopoverTrigger, PopoverContent } from "~/components/ui/popover"
+import { Button } from "~/components/ui/button"
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "~/components/ui/command"
+import { ChevronsUpDown, Check } from "lucide-react"
+import { cn } from "~/lib/utils"
+import { Input } from "~/components/ui/input"
+import { Label } from "~/components/ui/label"
+import { NewConfigModal } from "~/components/new-config-modal"
+import { useJsonConfigs, useSetJsonConfigs } from "~/context/json-config-provider"
+import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
+
+function ConfigCombobox({ selectedFile, onSelect }: { selectedFile: string; onSelect: (value: string) => void }) {
+    const [open, setOpen] = useState(false);
+    const { files } = useJsonConfigs();
+    const displayValue = selectedFile || "Select config";
+    const isPlaceholder = !selectedFile;
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn("w-full justify-between", isPlaceholder && "text-muted-foreground font-normal")}
+                >
+                    {displayValue}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+                <Command>
+                    <CommandInput placeholder="Search config files..." />
+                    <CommandList>
+                        <CommandEmpty>No config files found.</CommandEmpty>
+                        <CommandGroup>
+                            {files.map((file) => (
+                                <CommandItem
+                                    key={file}
+                                    value={file}
+                                    onSelect={() => {
+                                        onSelect(file);
+                                        setOpen(false);
+                                    }}
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", selectedFile === file ? "opacity-100" : "opacity-0")} />
+                                    {file}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
 
 export function CodeSection() {
-  const nodes = useContext(NodesContext)
-  const dispatch = useContext(NodesDispatchContext)
-  const [isCopied, setIsCopied] = useState(false)
-  const { toast } = useToast()
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center">
-        <h2 className="scroll-m-20 text-xl font-semibold tracking-tight">Code</h2>
-        <div className="flex flex-row gap-2 ml-auto">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <FileUp />
-              </Button>
-            </DialogTrigger>
-            <FileUploadDialogContent
-              onImport={(text) => {
-                dispatch({
-                  type: NodesActionType.IMPORT,
-                  payload: stringToNodes(text),
-                })
-              }}
+    const nodes = useContext(NodesContext)
+    const dispatch = useContext(NodesDispatchContext)
+    const { folderPath, files } = useJsonConfigs()
+    const setJsonConfigs = useSetJsonConfigs()
+    const [currentFilePath, setCurrentFilePath] = useState("")
+    const [showNewModal, setShowNewModal] = useState(false)
+    const { toast } = useToast()
+
+    const selectedFile = currentFilePath && currentFilePath.startsWith(`${folderPath}/`)
+        ? currentFilePath.slice(folderPath.length + 1)
+        : ""
+
+    const handleChooseFolder = async () => {
+        const result = await window.electronAPI.selectFolderPath()
+        if (result) {
+            const newFiles = await window.electronAPI.loadJsonFilesFromFolder(result)
+            setJsonConfigs({ folderPath: result, files: newFiles || [] })
+        }
+    }
+
+    const handleSelectConfig = (value: string) => {
+        const fullPath = `${folderPath}/${value}`
+        window.electronAPI.readJsonFile(fullPath).then((text) => {
+            dispatch({
+                type: NodesActionType.IMPORT,
+                payload: stringToNodes(text),
+            })
+            setCurrentFilePath(fullPath)
+        })
+    }
+
+    const handleChooseFile = async () => {
+        const result = await window.electronAPI.selectJsonFile()
+        if (result) {
+            const text = await window.electronAPI.readJsonFile(result)
+            dispatch({
+                type: NodesActionType.IMPORT,
+                payload: stringToNodes(text),
+            })
+            setCurrentFilePath(result)
+        }
+    }
+
+    const handleSave = () => {
+        if (currentFilePath) {
+            window.electronAPI.saveJsonFile(currentFilePath, nodesToString(nodes))
+            toast({ title: "Saved!" })
+        } else {
+            handleSaveAs()
+        }
+    }
+
+    const handleSaveAs = async () => {
+        const result = await window.electronAPI.selectSaveJsonFile()
+        if (result) {
+            window.electronAPI.saveJsonFile(result, nodesToString(nodes))
+            setCurrentFilePath(result)
+            toast({ title: "Saved!" })
+        }
+    }
+
+    return (
+        <>
+            <Card className="h-full flex flex-col overflow-hidden">
+                <Tabs defaultValue="code" className="flex flex-col h-full">
+                    <CardHeader>
+                        <div className="flex items-center gap-4">
+                            <TabsList className="grid grid-cols-2 w-1/2">
+                                <TabsTrigger value="code">Code</TabsTrigger>
+                                <TabsTrigger value="options">Options</TabsTrigger>
+                            </TabsList>
+                            <div className="flex-1">
+                                <ConfigCombobox selectedFile={selectedFile} onSelect={handleSelectConfig} />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden">
+                        <TabsContent value="code" className="h-full m-0 border rounded-lg">
+                            <ScrollArea className="h-full w-full rounded-md">
+                                <div className="p-4">
+                                    <pre>{nodesToString(nodes)}</pre>
+                                </div>
+                                <ScrollBar orientation="vertical"/>
+                                <ScrollBar orientation="horizontal"/>
+                            </ScrollArea>
+                        </TabsContent>
+                        <TabsContent value="options" className="h-full flex flex-col gap-4 m-0">
+                            <Label>Default config folder</Label>
+                            <div className="flex items-center gap-2">
+                                <Input value={folderPath} readOnly placeholder="Select folder" />
+                                <Button variant="outline" size="icon" onClick={handleChooseFolder}>
+                                    <FolderOpen />
+                                </Button>
+                            </div>
+                            <Button variant="outline" onClick={() => setShowNewModal(true)}>
+                                New file...
+                            </Button>
+                            <Label>Current config file</Label>
+                            <div className="flex items-center gap-2">
+                                <Input value={currentFilePath} readOnly placeholder="Unsaved" />
+                                <Button variant="outline" size="icon" onClick={handleChooseFile}>
+                                    <File />
+                                </Button>
+                            </div>
+                            <div className="flex flex-row gap-2">
+                                <Button variant="outline" onClick={handleSave}>Save</Button>
+                                <Button variant="outline" onClick={handleSaveAs}>Save as...</Button>
+                            </div>
+                            <div className="flex justify-end mt-auto">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => window.open("https://github.com/breadyk/reline-local-GUI", "_blank")}
+                                    title="GitHub"
+                                >
+                                    <Github />
+                                </Button>
+                            </div>
+                        </TabsContent>
+                    </CardContent>
+                </Tabs>
+            </Card>
+            <NewConfigModal
+                open={showNewModal}
+                onClose={() => setShowNewModal(false)}
+                folderPath={folderPath}
+                setCurrentFilePath={setCurrentFilePath}
             />
-          </Dialog>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => {
-              navigator.clipboard.writeText(nodesToString(nodes)).then(() => {
-                setIsCopied(true)
-                toast({
-                  title: "Copied!",
-                })
-                setTimeout(() => {
-                  setIsCopied(false)
-                }, 5000)
-              })
-            }}
-          >
-            {isCopied ? <Check /> : <Copy />}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto">
-        <pre>{nodesToString(nodes)}</pre>
-      </CardContent>
-    </Card>
-  )
+        </>
+    )
 }

@@ -250,6 +250,39 @@ ipcMain.handle("select-folder-path", async () => {
     return result.filePaths[0];
 });
 
+//JSON
+ipcMain.handle("select-json-file", async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [{ name: "JSON Files", extensions: ["json"] }],
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+    return result.filePaths[0];
+});
+
+ipcMain.handle("load-json-files-from-folder", async (event, folderPath) => {
+    if (!fs.existsSync(folderPath)) return null;
+    const jsonFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".json"));
+    return jsonFiles;
+});
+
+ipcMain.handle("read-json-file", async (event, filePath) => {
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, "utf-8");
+});
+
+ipcMain.handle("save-json-file", async (event, filePath, content) => {
+    fs.writeFileSync(filePath, content);
+});
+
+ipcMain.handle("select-save-json-file", async () => {
+    const result = await dialog.showSaveDialog({
+        filters: [{ name: "JSON Files", extensions: ["json"] }],
+    });
+    if (result.canceled || !result.filePath) return null;
+    return result.filePath;
+});
+
 // Pipeline
 ipcMain.handle("run-python-pipeline", async (event, jsonData) => {
     const tempPath = path.join(relineDir, "data.json");
