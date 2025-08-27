@@ -1,5 +1,6 @@
 import { ModalBase } from "~/components/ui/modal-base"
 import { Button } from "~/components/ui/button"
+import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
 
 export function LogDialog({
                               open,
@@ -18,9 +19,11 @@ export function LogDialog({
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-auto p-4 text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                {logLines.join("\n")}
-            </div>
+            <ScrollArea className="w-full rounded-md h-72">
+                <div className="flex-1 overflow-auto p-4 text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                    {logLines.join("\n")}
+                </div>
+            </ScrollArea>
 
             {/* Footer */}
             <div className="px-4 py-3 border-t border-border bg-zinc-100 dark:bg-zinc-800 flex justify-end">

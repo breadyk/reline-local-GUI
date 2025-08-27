@@ -1,9 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { spawn } = require("child_process");
-const kill = require("tree-kill");
 
 const isDev = !app.isPackaged;
 
@@ -67,8 +66,7 @@ function hasNvidiaGPU() {
             const out = require("child_process").execSync("lspci").toString();
             return out.toLowerCase().includes("nvidia");
         } else if (os.platform() === "darwin") {
-            const out = require("child_process").execSync("system_profiler SPDisplaysDataType").toString();
-            return out.toLowerCase().includes("nvidia");
+            return false;
         }
     } catch {
         return false;
@@ -104,6 +102,7 @@ const createWindow = () => {
             contextIsolation: true,
         },
     });
+    Menu.setApplicationMenu(null);
 
     if (isDev) win.loadURL("http://localhost:5173");
     else win.loadFile("./dist/index.html");
@@ -174,39 +173,31 @@ ipcMain.handle("get-venv-size", () => {
 
 // Dependency Installation
 ipcMain.handle("install-dependency", async (event, id) => {
-    const log = (msg) => event.sender.send("pipeline-output", msg);
+    const log = (data) => event.sender.send("pipeline-output", data);
     try {
-        if (!fs.existsSync(relineDir)) fs.mkdirSync(relineDir, { recursive: true });
         await ensureUVBinary();
-
-        const uv = uvBinaryPath;
-        const venvPath = path.join(relineDir, ".venv");
-        const venvPython = os.platform() === "win32"
-            ? path.join(venvPath, "Scripts", "python.exe")
-            : path.join(venvPath, "bin", "python");
-
+        const pipArgs = ["pip", "install"];
         if (id === "python") {
-            log("📦 Creating virtual environment with Python 3.12...");
-            await runCommand(uv, ["venv", "--python", "3.12"], { cwd: relineDir }, log);
+            log("📦 Installing Python 3.12 + venv...");
+            await runCommand(uvBinaryPath, ["venv", ".venv"], { cwd: relineDir }, log);
             return;
         }
 
-        if (!fs.existsSync(venvPython)) throw new Error("❌ Venv not found. Please install Python env first.");
-
-        const pipArgs = ["pip", "install"];
         if (id === "torch") {
-            const cuda = hasNvidiaGPU();
-            const torchArgs = cuda
-                ? ["torch", "--index-url", "https://download.pytorch.org/whl/cu126"]
-                : ["torch"];
-            log(`📦 Installing torch (${cuda ? "CUDA" : "CPU"})...`);
-            await runCommand(uv, [...pipArgs, ...torchArgs], { cwd: relineDir }, log);
+            log("📦 Installing torch (CPU)...");
+            await runCommand(uvBinaryPath, [...pipArgs, "torch"], { cwd: relineDir }, log);
+            return;
+        }
+
+        if (id === "torch-cuda") {
+            log("📦 Installing torch (CUDA)...");
+            await runCommand(uvBinaryPath, [...pipArgs, "torch", "--index-url", "https://download.pytorch.org/whl/cu126"], { cwd: relineDir }, log);
             return;
         }
 
         if (id === "reline") {
             log("📦 Installing reline...");
-            await runCommand(uv, [...pipArgs, "reline"], { cwd: relineDir }, log);
+            await runCommand(uvBinaryPath, [...pipArgs, "reline"], { cwd: relineDir }, log);
             return;
         }
 
@@ -317,6 +308,11 @@ ipcMain.handle("stop-python-pipeline", () => {
         manuallyStopped = true;
         currentChild.kill("SIGTERM");
     }
+});
+
+//Other
+ipcMain.handle("open-external", async (_event, url) => {
+    await shell.openExternal(url);
 });
 
 // ==== App Lifecycle ====

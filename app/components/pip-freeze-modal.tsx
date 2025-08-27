@@ -1,6 +1,7 @@
 import { Button } from "~/components/ui/button";
 import { X } from "lucide-react";
 import { ModalBase } from "~/components/ui/modal-base";
+import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
 
 interface PipFreezeModalProps {
     open: boolean;
@@ -21,29 +22,32 @@ export function PipFreezeModal({ open, onClose, pipFreezeData }: PipFreezeModalP
                     <X />
                 </Button>
             </div>
-            <div className="flex-1 overflow-auto p-4">
-                {pipFreezeData.error ? (
-                    <div className="text-red-600 dark:text-red-400">
-                        Error: {pipFreezeData.error}
-                    </div>
-                ) : pipFreezeData.packages.length === 0 ? (
-                    <div className="text-muted-foreground">
-                        No dependencies found in the virtual environment.
-                    </div>
-                ) : (
-                    <ul className="space-y-2">
-                        {pipFreezeData.packages.map((pkg, index) => (
-                            <li
-                                key={index}
-                                className="border rounded-lg p-3 bg-background text-sm flex justify-between items-center font-mono"
-                            >
-                                <span className="font-semibold text-foreground">{pkg.name}</span>
-                                <span className="text-muted-foreground">{pkg.version}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+            <ScrollArea className="w-full rounded-md h-96">
+                <div className="p-4">
+                    {pipFreezeData.error ? (
+                        <div className="text-red-600 dark:text-red-400">
+                            Error: {pipFreezeData.error}
+                        </div>
+                    ) : pipFreezeData.packages.length === 0 ? (
+                        <div className="text-muted-foreground">
+                            No dependencies found in the virtual environment.
+                        </div>
+                    ) : (
+                        <ul className="space-y-2">
+                            {pipFreezeData.packages.map((pkg, index) => (
+                                <li
+                                    key={index}
+                                    className="border rounded-lg p-3 bg-background text-sm flex justify-between items-center font-mono"
+                                >
+                                    <span className="font-semibold text-foreground">{pkg.name}</span>
+                                    <span className="text-muted-foreground">{pkg.version}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                <ScrollBar orientation="vertical" />
+            </ScrollArea>
             <div className="px-4 py-3 border-t border-border bg-zinc-100 dark:bg-zinc-800 flex justify-end">
                 <Button
                     variant="outline"

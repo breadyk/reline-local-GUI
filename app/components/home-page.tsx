@@ -248,7 +248,7 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        <div className="text-muted-foreground text-sm">pre-release-build-v-0.9.2</div>
+                        <div className="text-muted-foreground text-sm">v-1.0.0</div>
                     </div>
                 </footer>
 

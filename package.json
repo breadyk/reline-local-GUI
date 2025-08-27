@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "relin-local-gui",
-  "version": "0.0.9",
+  "version": "1.0.0",
   "main": "index-electron.cjs",
   "type": "module",
   "scripts": {
@@ -93,16 +93,25 @@
       "output": "release"
     },
     "win": {
+      "icon": "app/public/favicon.ico",
       "target": [
         "nsis"
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true
+    },
     "mac": {
+      "icon": "app/public/favicon.icns",
       "target": [
         "dmg"
       ]
     },
     "linux": {
+      "icon": "app/public/favicon.png",
       "target": [
         "AppImage"
       ]

@@ -50,6 +50,8 @@ declare global {
             onPipelineEnd: (
                 cb: (result: { success: boolean; interrupted: boolean }) => void
             ) => void;
+
+            openExternal: (url: string) => void;
         };
     }
 }

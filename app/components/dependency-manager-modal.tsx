@@ -17,13 +17,13 @@ const DEPENDENCIES = [
         id: "python",
         name: "Python 3.12 + venv",
         size: "25 MB",
-        description: "Install UV and create isolated Python environment.",
+        description: "Creates isolated Python environment.",
     },
     {
         id: "torch",
         name: "Torch",
         size: "~1 GB",
-        description: "Deep learning framework (CUDA or CPU variant).",
+        description: "Upscaling framework (CUDA for Nvidia, CPU for others).",
     },
     {
         id: "reline",
@@ -120,10 +120,10 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
 
     useEffect(() => {
         (async () => {
-            const supported = await window.electronAPI.checkGPU();
-            const cudaAvailable = supported && process.platform !== "darwin";
+            const cudaAvailable = await window.electronAPI.checkGPU();
             setGpuSupported(cudaAvailable);
-            if (!cudaAvailable) setTorchVariant("cpu");
+            if (!cudaAvailable) setTorchVariant("cpu")
+            else setTorchVariant("cuda");
 
             const deps = await window.electronAPI.checkDependencies();
             if (deps.venv) {

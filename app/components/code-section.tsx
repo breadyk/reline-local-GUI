@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react"
+import React, { useContext, useState, useEffect } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import { File, Github, FolderOpen } from "lucide-react"
 import { nodesToString, stringToNodes } from "~/lib/utils"
@@ -16,6 +16,9 @@ import { Label } from "~/components/ui/label"
 import { NewConfigModal } from "~/components/new-config-modal"
 import { useJsonConfigs, useSetJsonConfigs } from "~/context/json-config-provider"
 import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
+
+const CURRENT_CONFIG_KEY = "reline_current_config";
+const STORAGE_KEY = "reline_nodes"; // Предполагаем, что это ключ для unsaved nodes из home-page.tsx
 
 function ConfigCombobox({ selectedFile, onSelect }: { selectedFile: string; onSelect: (value: string) => void }) {
     const [open, setOpen] = useState(false);
@@ -68,13 +71,64 @@ export function CodeSection() {
     const dispatch = useContext(NodesDispatchContext)
     const { folderPath, files } = useJsonConfigs()
     const setJsonConfigs = useSetJsonConfigs()
-    const [currentFilePath, setCurrentFilePath] = useState("")
+    const [currentFilePath, setCurrentFilePath] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return localStorage.getItem(CURRENT_CONFIG_KEY) || "";
+    });
     const [showNewModal, setShowNewModal] = useState(false)
     const { toast } = useToast()
 
     const selectedFile = currentFilePath && currentFilePath.startsWith(`${folderPath}/`)
         ? currentFilePath.slice(folderPath.length + 1)
         : ""
+
+    // Сохранение currentFilePath в localStorage при изменении
+    useEffect(() => {
+        localStorage.setItem(CURRENT_CONFIG_KEY, currentFilePath);
+    }, [currentFilePath]);
+
+    // Загрузка nodes из сохраненного currentFilePath при монтировании
+    useEffect(() => {
+        const loadInitialConfig = async () => {
+            if (currentFilePath) {
+                try {
+                    const text = await window.electronAPI.readJsonFile(currentFilePath);
+                    if (text) {
+                        dispatch({
+                            type: NodesActionType.IMPORT,
+                            payload: stringToNodes(text),
+                        });
+                    } else {
+                        throw new Error("File not found");
+                    }
+                } catch (err) {
+                    console.error("Failed to load saved config:", err);
+                    setCurrentFilePath(""); // Сброс, если файл не найден
+                    localStorage.removeItem(CURRENT_CONFIG_KEY);
+
+                    // Fallback на unsaved nodes, если они есть
+                    const unsaved = localStorage.getItem(STORAGE_KEY);
+                    if (unsaved) {
+                        dispatch({
+                            type: NodesActionType.IMPORT,
+                            payload: JSON.parse(unsaved),
+                        });
+                    }
+                }
+            } else {
+                // Если нет currentFilePath, загрузить unsaved nodes
+                const unsaved = localStorage.getItem(STORAGE_KEY);
+                if (unsaved) {
+                    dispatch({
+                        type: NodesActionType.IMPORT,
+                        payload: JSON.parse(unsaved),
+                    });
+                }
+            }
+        };
+
+        loadInitialConfig();
+    }, []); // Только при монтировании
 
     const handleChooseFolder = async () => {
         const result = await window.electronAPI.selectFolderPath()
@@ -161,6 +215,7 @@ export function CodeSection() {
                             <Button variant="outline" onClick={() => setShowNewModal(true)}>
                                 New file...
                             </Button>
+                            <div className="border m-2"></div>
                             <Label>Current config file</Label>
                             <div className="flex items-center gap-2">
                                 <Input value={currentFilePath} readOnly placeholder="Unsaved" />
@@ -176,7 +231,7 @@ export function CodeSection() {
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => window.open("https://github.com/breadyk/reline-local-GUI", "_blank")}
+                                    onClick={() => window.electronAPI.openExternal("https://github.com/breadyk/reline-local-GUI")}
                                     title="GitHub"
                                 >
                                     <Github />

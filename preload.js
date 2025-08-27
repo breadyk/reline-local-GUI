@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, shell } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
     selectModelFolder: () => ipcRenderer.invoke("select-model-folder"),
@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getVenvSize: () => ipcRenderer.invoke("get-venv-size"),
     checkGPU: () => ipcRenderer.invoke("check-gpu"),
     checkUVPipFreeze: () => ipcRenderer.invoke("check-uv-pip-freeze"),
+    openExternal: (url) => ipcRenderer.invoke("open-external", url),
+
 });
