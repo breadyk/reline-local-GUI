@@ -95,14 +95,14 @@ const createWindow = () => {
         height: 800,
         resizable: true,
         title: "Reline GUI",
-        icon: path.join(__dirname, "app", "public",  "favicon.png"),
+        icon: path.join(__dirname, "public",  "favicon.png"),
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             nodeIntegration: false,
             contextIsolation: true,
         },
     });
-    Menu.setApplicationMenu(null);
+    //Menu.setApplicationMenu(null);
 
     if (isDev) win.loadURL("http://localhost:5173");
     else win.loadFile("./dist/index.html");
@@ -140,9 +140,7 @@ ipcMain.handle("check-uv-pip-freeze", async (event) => {
         }
         const uv = uvBinaryPath;
         const output = await runCommand(uv, ["pip", "freeze"], { cwd: relineDir });
-        // Strip ANSI escape codes
         const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
-        // Parse standard pip freeze format (name==version)
         const packages = cleanOutput
             .split("\n")
             .filter(line => line.trim() && !line.startsWith("#"))
@@ -295,6 +293,7 @@ ipcMain.handle("run-python-pipeline", async (event, jsonData) => {
     currentChild.stderr.on("data", (d) => event.sender.send("pipeline-output", d.toString()));
 
     currentChild.on("close", (code) => {
+        console.log("Pipeline closed, code:", code, "timestamp:", Date.now());
         event.sender.send("pipeline-end", { success: code === 0 || manuallyStopped, interrupted: manuallyStopped });
         currentChild = null;
         manuallyStopped = false;
@@ -308,6 +307,16 @@ ipcMain.handle("stop-python-pipeline", () => {
         manuallyStopped = true;
         currentChild.kill("SIGTERM");
     }
+});
+
+// Audio file selection
+ipcMain.handle("select-audio-file", async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [{ name: "Audio Files", extensions: ["mp3", "wav", "ogg"] }],
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+    return result.filePaths[0];
 });
 
 //Other

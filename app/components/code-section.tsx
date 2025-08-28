@@ -1,6 +1,6 @@
-import React, { useContext, useState, useEffect } from "react"
+import React, { useContext, useState, useEffect, useRef } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
-import { File, Github, FolderOpen } from "lucide-react"
+import {File, FolderOpen, FileJson2, ChevronsUpDown, Check, RotateCcw, Play, Square} from "lucide-react"
 import { nodesToString, stringToNodes } from "~/lib/utils"
 import { useToast } from "~/components/ui/use-toast"
 import { Card, CardHeader, CardContent } from "~/components/ui/card"
@@ -9,16 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { Popover, PopoverTrigger, PopoverContent } from "~/components/ui/popover"
 import { Button } from "~/components/ui/button"
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "~/components/ui/command"
-import { ChevronsUpDown, Check } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { NewConfigModal } from "~/components/new-config-modal"
 import { useJsonConfigs, useSetJsonConfigs } from "~/context/json-config-provider"
 import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
+import { Checkbox } from "~/components/ui/checkbox"
+import { NumberInput } from "~/components/ui/number-input"
 
 const CURRENT_CONFIG_KEY = "reline_current_config";
-const STORAGE_KEY = "reline_nodes"; // Предполагаем, что это ключ для unsaved nodes из home-page.tsx
+const STORAGE_KEY = "reline_nodes";
 
 function ConfigCombobox({ selectedFile, onSelect }: { selectedFile: string; onSelect: (value: string) => void }) {
     const [open, setOpen] = useState(false);
@@ -77,17 +78,29 @@ export function CodeSection() {
     });
     const [showNewModal, setShowNewModal] = useState(false)
     const { toast } = useToast()
+    const [soundEnabled, setSoundEnabled] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return localStorage.getItem("reline_sound_enabled") === "true" || false;
+    });
+    const [soundPath, setSoundPath] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return localStorage.getItem("reline_sound_path") || "";
+    });
+    const [volume, setVolume] = useState(() => {
+        if (typeof window === "undefined") return 100;
+        return parseInt(localStorage.getItem("reline_sound_volume") || "100", 10);
+    });
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const selectedFile = currentFilePath && currentFilePath.startsWith(`${folderPath}/`)
         ? currentFilePath.slice(folderPath.length + 1)
         : ""
 
-    // Сохранение currentFilePath в localStorage при изменении
     useEffect(() => {
         localStorage.setItem(CURRENT_CONFIG_KEY, currentFilePath);
     }, [currentFilePath]);
 
-    // Загрузка nodes из сохраненного currentFilePath при монтировании
     useEffect(() => {
         const loadInitialConfig = async () => {
             if (currentFilePath) {
@@ -103,10 +116,9 @@ export function CodeSection() {
                     }
                 } catch (err) {
                     console.error("Failed to load saved config:", err);
-                    setCurrentFilePath(""); // Сброс, если файл не найден
+                    setCurrentFilePath("");
                     localStorage.removeItem(CURRENT_CONFIG_KEY);
 
-                    // Fallback на unsaved nodes, если они есть
                     const unsaved = localStorage.getItem(STORAGE_KEY);
                     if (unsaved) {
                         dispatch({
@@ -116,7 +128,6 @@ export function CodeSection() {
                     }
                 }
             } else {
-                // Если нет currentFilePath, загрузить unsaved nodes
                 const unsaved = localStorage.getItem(STORAGE_KEY);
                 if (unsaved) {
                     dispatch({
@@ -128,7 +139,19 @@ export function CodeSection() {
         };
 
         loadInitialConfig();
-    }, []); // Только при монтировании
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("reline_sound_enabled", soundEnabled.toString());
+    }, [soundEnabled]);
+
+    useEffect(() => {
+        localStorage.setItem("reline_sound_path", soundPath);
+    }, [soundPath]);
+
+    useEffect(() => {
+        localStorage.setItem("reline_sound_volume", volume.toString());
+    }, [volume]);
 
     const handleChooseFolder = async () => {
         const result = await window.electronAPI.selectFolderPath()
@@ -179,6 +202,48 @@ export function CodeSection() {
         }
     }
 
+    const handleSelectAudio = async () => {
+        const result = await window.electronAPI.selectAudioFile()
+        if (result) {
+            setSoundPath(result)
+        }
+    }
+
+    const handleResetSound = () => {
+        setSoundPath("")
+    }
+
+    const handlePreview = () => {
+        if (isPlaying) {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
+            setIsPlaying(false);
+            return;
+        }
+
+        const soundSrc = soundPath ? `file://${soundPath}` : '/fart.mp3';
+        const audio = new Audio(soundSrc);
+        audio.volume = volume / 100;
+        audio.play().catch((err) => console.error("Audio play error:", err));
+        audio.onended = () => {
+            setIsPlaying(false);
+            audioRef.current = null;
+        };
+        audioRef.current = audio;
+        setIsPlaying(true);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+        };
+    }, []);
+
     return (
         <>
             <Card className="h-full flex flex-col overflow-hidden">
@@ -205,38 +270,70 @@ export function CodeSection() {
                             </ScrollArea>
                         </TabsContent>
                         <TabsContent value="options" className="h-full flex flex-col gap-4 m-0">
-                            <Label>Default config folder</Label>
-                            <div className="flex items-center gap-2">
-                                <Input value={folderPath} readOnly placeholder="Select folder" />
-                                <Button variant="outline" size="icon" onClick={handleChooseFolder}>
-                                    <FolderOpen />
-                                </Button>
-                            </div>
-                            <Button variant="outline" onClick={() => setShowNewModal(true)}>
-                                New file...
-                            </Button>
-                            <div className="border m-2"></div>
-                            <Label>Current config file</Label>
-                            <div className="flex items-center gap-2">
-                                <Input value={currentFilePath} readOnly placeholder="Unsaved" />
-                                <Button variant="outline" size="icon" onClick={handleChooseFile}>
-                                    <File />
-                                </Button>
-                            </div>
-                            <div className="flex flex-row gap-2">
-                                <Button variant="outline" onClick={handleSave}>Save</Button>
-                                <Button variant="outline" onClick={handleSaveAs}>Save as...</Button>
-                            </div>
-                            <div className="flex justify-end mt-auto">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => window.electronAPI.openExternal("https://github.com/breadyk/reline-local-GUI")}
-                                    title="GitHub"
-                                >
-                                    <Github />
-                                </Button>
-                            </div>
+                            <ScrollArea className="h-full w-full rounded-md border">
+                                <div className="p-4 flex flex-col gap-4 m-0">
+                                    <Label>Default config folder</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input value={folderPath} readOnly placeholder="Select folder"/>
+                                        <Button variant="outline" size="icon" onClick={handleChooseFolder}>
+                                            <FolderOpen/>
+                                        </Button>
+                                    </div>
+                                    <Button variant="outline" onClick={() => setShowNewModal(true)}>
+                                        New file...
+                                    </Button>
+                                    <div className="border m-2"></div>
+                                    <Label>Current config file</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input value={currentFilePath} readOnly placeholder="Unsaved"/>
+                                        <Button variant="outline" size="icon" onClick={handleChooseFile}>
+                                            <FileJson2/>
+                                        </Button>
+                                    </div>
+                                    <div className="flex flex-row gap-2">
+                                        <Button variant="outline" onClick={handleSave}>Save</Button>
+                                        <Button variant="outline" onClick={handleSaveAs}>Save as...</Button>
+                                    </div>
+                                    <div className="border m-2"></div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="play-sound"
+                                            checked={soundEnabled}
+                                            onCheckedChange={setSoundEnabled}
+                                        />
+                                        <Label htmlFor="play-sound">Play sound at the end</Label>
+                                    </div>
+                                    <Label>Custom sound</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Button className="pl-2 pr-2" variant="outline" size="icon" onClick={handlePreview}>
+                                            {isPlaying ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                        </Button>
+                                        <Input
+                                            value={soundPath || "Default: fart.mp3"}
+                                            readOnly
+                                            placeholder="Default sound"
+                                        />
+                                        <Button className="pl-2 pr-2" variant="outline" size="icon" onClick={handleSelectAudio}>
+                                            <File/>
+                                        </Button>
+                                        <Button className="pl-2 pr-2" variant="outline" size="icon" title="Reset" onClick={handleResetSound}>
+                                            <RotateCcw/>
+                                        </Button>
+                                    </div>
+                                    <div>
+                                        <NumberInput
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            labelText="Volume"
+                                            value={volume}
+                                            onChange={(value) => setVolume(Math.trunc(value))}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end mt-auto">
+                                    </div>
+                                </div>
+                            </ScrollArea>
                         </TabsContent>
                     </CardContent>
                 </Tabs>

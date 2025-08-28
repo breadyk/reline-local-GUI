@@ -22,8 +22,8 @@ export function PipFreezeModal({ open, onClose, pipFreezeData }: PipFreezeModalP
                     <X />
                 </Button>
             </div>
-            <ScrollArea className="w-full rounded-md h-96">
-                <div className="p-4">
+            <ScrollArea className="w-full rounded-md">
+                <div className="p-4 h-96">
                     {pipFreezeData.error ? (
                         <div className="text-red-600 dark:text-red-400">
                             Error: {pipFreezeData.error}

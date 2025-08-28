@@ -29,7 +29,7 @@ export function NewConfigModal({ open, onClose, folderPath, setCurrentFilePath }
 
         const fullPath = `${folderPath}/${fileName}`;
 
-        // Дефолтный шаблон
+
         const defaultTemplate = JSON.stringify([
             {
                 "type": "folder_reader",
@@ -94,23 +94,18 @@ export function NewConfigModal({ open, onClose, folderPath, setCurrentFilePath }
         const content = template === "with-template" ? defaultTemplate : "[]";
 
         try {
-            // Сохраняем файл
             await window.electronAPI.saveJsonFile(fullPath, content);
 
-            // Обновляем список файлов в контексте
             const newFiles = await window.electronAPI.loadJsonFilesFromFolder(folderPath);
             setJsonConfigs({ folderPath, files: newFiles || [] });
 
-            // Импортируем содержимое в NodesContext
             dispatch({
                 type: NodesActionType.IMPORT,
                 payload: stringToNodes(content),
             });
 
-            // Устанавливаем текущий файл
             setCurrentFilePath(fullPath);
 
-            // Закрываем модалку
             onClose();
         } catch (err) {
             console.error("Failed to create JSON file:", err);

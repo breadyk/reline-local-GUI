@@ -14,7 +14,7 @@ export function NodesSection() {
         <AddNodeButton />
       </CardHeader>
       <CardContent className="flex flex-col gap-3 flex-1 overflow-hidden">
-          <ScrollArea className="rounded-md m-0 border">
+          <ScrollArea className="rounded-md m-0 border h-full">
               <div className="flex flex-col gap-3 p-4">
                   {nodes.map((data, index) => (
                       <NodeResolver key={`${data.type}_${index}`} id={data.id} />

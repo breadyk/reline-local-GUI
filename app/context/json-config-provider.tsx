@@ -1,5 +1,4 @@
-import { createContext, useState, useEffect, ReactNode, useContext } from "react"; // Добавлен useContext
-
+import { createContext, useState, useEffect, ReactNode, useContext } from "react";
 const JSON_CONFIGS_STORAGE_KEY = "reline_json_configs";
 
 export const JsonConfigsContext = createContext<{ folderPath: string; files: string[] }>({ folderPath: "", files: [] });

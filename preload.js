@@ -21,5 +21,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     checkGPU: () => ipcRenderer.invoke("check-gpu"),
     checkUVPipFreeze: () => ipcRenderer.invoke("check-uv-pip-freeze"),
     openExternal: (url) => ipcRenderer.invoke("open-external", url),
-
+    selectAudioFile: () => ipcRenderer.invoke("select-audio-file"),
 });

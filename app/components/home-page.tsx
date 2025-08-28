@@ -1,18 +1,17 @@
-import { useEffect, useReducer, useRef, useState } from "react"
+import React, { useEffect, useReducer, useRef, useState } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import { useSetModels } from "~/context/model-provider"
-import { JsonConfigsProvider } from "~/context/json-config-provider" // Added import
+import { JsonConfigsProvider } from "~/context/json-config-provider"
 import { nodesReducer } from "~/context/reducer"
 import { DEFAULT_NODES, STORAGE_KEY } from "~/constants"
 import { CodeSection } from "~/components/code-section"
 import { NodesSection } from "~/components/nodes-section"
 import { Button } from "~/components/ui/button"
-import { Play, Square, LoaderCircle, Download } from "lucide-react"
+import {Play, Square, LoaderCircle, Download, Github, Package} from "lucide-react"
 import { nodesToString, cn } from "~/lib/utils"
 import { Progress } from "~/components/ui/progress"
 import { DependencyManagerModal } from "~/components/dependency-manager-modal"
 import { LogDialog } from "~/components/log-dialog"
-import { Dialog } from "~/components/ui/dialog"
 import {ModeToggle} from "~/components/mode-toggle.tsx";
 
 export default function HomePage() {
@@ -23,6 +22,9 @@ export default function HomePage() {
     const [installLogs, setInstallLogs] = useState<string[]>([])
     const [installing, setInstalling] = useState(false)
     const [dependenciesInstalled, setDependenciesInstalled] = useState(false)
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const isPlayingRef = useRef(false);
+    const lastPipelineEndRef = useRef(0);
 
     const checkDependencies = async () => {
         try {
@@ -38,6 +40,9 @@ export default function HomePage() {
         window.electronAPI.onPipelineOutput((data: string) => {
             setInstallLogs((prev) => [...prev, ...data.trim().split("\n")])
         })
+        return () => {
+            window.electronAPI.removeListener?.("pipeline-output");
+        }
     }, [])
 
     useEffect(() => {
@@ -84,8 +89,6 @@ export default function HomePage() {
     }, []);
 
     useEffect(() => {
-        if (!isRunning) return
-
         const handleOutput = (data: string) => {
             outputRef.current += data
             const newLines = data.trim().split("\n")
@@ -110,13 +113,15 @@ export default function HomePage() {
             }
         }
 
-        const handleEnd = ({
-                               success,
-                               interrupted,
-                           }: {
-            success: boolean
-            interrupted?: boolean
-        }) => {
+        const handleEnd = async ({ success, interrupted }: { success: boolean, interrupted?: boolean }) => {
+            const now = Date.now();
+            console.log("onPipelineEnd called, success:", success, "interrupted:", interrupted, "timestamp:", now);
+            if (now - lastPipelineEndRef.current < 500) {
+                console.log("Ignoring duplicate onPipelineEnd call");
+                return;
+            }
+            lastPipelineEndRef.current = now;
+
             setIsRunning(false)
 
             if (interrupted) {
@@ -128,10 +133,46 @@ export default function HomePage() {
                 setProgressText("✅ Complete")
                 setProgressPercent(100)
             }
+
+            if (success && !interrupted && !isPlayingRef.current) {
+                const soundEnabled = localStorage.getItem("reline_sound_enabled") === "true";
+                if (soundEnabled) {
+                    const soundPath = localStorage.getItem("reline_sound_path") || "";
+                    const volume = parseInt(localStorage.getItem("reline_sound_volume") || "100", 10);
+                    const audioUrl = soundPath ? `file://${soundPath}` : "/fart.mp3";
+
+                    if (audioRef.current) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                        audioRef.current = null;
+                    }
+
+                    const audio = new Audio(audioUrl);
+                    audio.volume = volume / 100;
+                    isPlayingRef.current = true;
+                    try {
+                        await audio.play();
+                        audioRef.current = audio;
+                        audio.onended = () => {
+                            isPlayingRef.current = false;
+                            audioRef.current = null;
+                        };
+                    } catch (err) {
+                        console.error("Failed to play sound:", err);
+                        isPlayingRef.current = false;
+                    }
+                }
+            }
         }
 
         window.electronAPI.onPipelineOutput(handleOutput)
         window.electronAPI.onPipelineEnd(handleEnd)
+
+        return () => {
+            window.electronAPI.removeListener?.("pipeline-output", handleOutput);
+            window.electronAPI.removeListener?.("pipeline-end", handleEnd);
+        }
     }, [isRunning])
 
     const handleStart = async () => {
@@ -154,16 +195,22 @@ export default function HomePage() {
         window.electronAPI.stopPythonPipeline()
         setProgressText("⛔ Interrupted")
         setIsRunning(false)
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current = null;
+            isPlayingRef.current = false;
+        }
     }
 
     return (
-        <JsonConfigsProvider> {/* Added provider wrapper */}
+        <JsonConfigsProvider>
             <main className="h-screen flex flex-col">
                 <header className="p-5 flex justify-between items-center">
-                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
+                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight pl-2">
                         Reline Local GUI
                     </h1>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pr-2">
                         <ModeToggle/>
                         <Button
                             variant="outline"
@@ -171,7 +218,7 @@ export default function HomePage() {
                             onClick={() => setShowInstallModal(true)}
                             title="Install dependencies"
                         >
-                            <Download className="h-5 w-5" />
+                            <Package/>
                         </Button>
                     </div>
                 </header>
@@ -248,11 +295,22 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        <div className="text-muted-foreground text-sm">v-1.0.0</div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-muted-foreground text-sm">v-1.0.0</div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => window.electronAPI.openExternal("https://github.com/breadyk/reline-local-GUI")}
+                                title="GitHub"
+                            >
+                                <Github/>
+                            </Button>
+                        </div>
+
                     </div>
                 </footer>
 
-                <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines} />
+                <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines}/>
                 <DependencyManagerModal
                     open={showInstallModal}
                     onClose={() => setShowInstallModal(false)}

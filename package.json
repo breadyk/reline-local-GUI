@@ -93,7 +93,7 @@
       "output": "release"
     },
     "win": {
-      "icon": "app/public/favicon.ico",
+      "icon": "public/favicon.ico",
       "target": [
         "nsis"
       ]
@@ -105,13 +105,13 @@
       "createDesktopShortcut": true
     },
     "mac": {
-      "icon": "app/public/favicon.icns",
+      "icon": "public/favicon.icns",
       "target": [
         "dmg"
       ]
     },
     "linux": {
-      "icon": "app/public/favicon.png",
+      "icon": "public/favicon.png",
       "target": [
         "AppImage"
       ]
