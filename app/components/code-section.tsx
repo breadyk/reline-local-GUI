@@ -255,13 +255,27 @@ export function CodeSection() {
                                 <TabsTrigger value="options">Options</TabsTrigger>
                             </TabsList>
                             <div className="flex-1">
-                                <ConfigCombobox selectedFile={selectedFile} onSelect={handleSelectConfig} />
+                                <ConfigCombobox selectedFile={selectedFile} onSelect={handleSelectConfig}/>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 border rounded-md p-4 mt-6">
+                            <Label>Current config file</Label>
+                            <div className="flex items-center gap-2">
+                                <Input value={currentFilePath} readOnly placeholder="Unsaved"/>
+                                <Button variant="outline" size="icon" onClick={handleChooseFile}>
+                                    <FileJson2/>
+                                </Button>
+                            </div>
+                            <div className="flex flex-row gap-2">
+                                <Button variant="outline" onClick={handleSave}>Save</Button>
+                                <Button variant="outline" onClick={handleSaveAs}>Save as...</Button>
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden">
-                        <TabsContent value="code" className="h-full m-0 border rounded-lg">
-                            <ScrollArea className="h-full w-full rounded-md">
+                    <CardContent className="overflow-hidden">
+
+                        <TabsContent value="code" className="h-full m-0 rounded-lg">
+                            <ScrollArea className="h-full w-full rounded-md border">
                                 <div className="p-4">
                                     <pre>{nodesToString(nodes)}</pre>
                                 </div>
@@ -270,8 +284,8 @@ export function CodeSection() {
                             </ScrollArea>
                         </TabsContent>
                         <TabsContent value="options" className="h-full flex flex-col gap-4 m-0">
-                            <ScrollArea className="h-full w-full rounded-md border">
-                                <div className="p-4 flex flex-col gap-4 m-0">
+                            <ScrollArea className="h-screen w-full rounded-md border">
+                            <div className="p-4 flex flex-col gap-4 m-0">
                                     <Label>Default config folder</Label>
                                     <div className="flex items-center gap-2">
                                         <Input value={folderPath} readOnly placeholder="Select folder"/>
@@ -282,18 +296,6 @@ export function CodeSection() {
                                     <Button variant="outline" onClick={() => setShowNewModal(true)}>
                                         New file...
                                     </Button>
-                                    <div className="border m-2"></div>
-                                    <Label>Current config file</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input value={currentFilePath} readOnly placeholder="Unsaved"/>
-                                        <Button variant="outline" size="icon" onClick={handleChooseFile}>
-                                            <FileJson2/>
-                                        </Button>
-                                    </div>
-                                    <div className="flex flex-row gap-2">
-                                        <Button variant="outline" onClick={handleSave}>Save</Button>
-                                        <Button variant="outline" onClick={handleSaveAs}>Save as...</Button>
-                                    </div>
                                     <div className="border m-2"></div>
                                     <div className="flex items-center space-x-2">
                                         <Checkbox

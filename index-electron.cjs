@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { spawn } = require("child_process");
+const https = require("https");
 
 const isDev = !app.isPackaged;
 
@@ -102,7 +103,7 @@ const createWindow = () => {
             contextIsolation: true,
         },
     });
-    //Menu.setApplicationMenu(null);
+    Menu.setApplicationMenu(null);
 
     if (isDev) win.loadURL("http://localhost:5173");
     else win.loadFile("./dist/index.html");
@@ -214,20 +215,20 @@ ipcMain.handle("select-model-folder", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
     if (result.canceled || !result.filePaths.length) return null;
     const folderPath = result.filePaths[0];
-    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth")).map(f => f.replace(/\.pth$/, ''));
+    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth") || f.endsWith(".safetensors"));
     return { folderPath, models: modelFiles };
 });
 
 ipcMain.handle("load-models-from-folder", async (event, folderPath) => {
     if (!fs.existsSync(folderPath)) return null;
-    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth")).map(f => f.replace(/\.pth$/, ''));
+    const modelFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".pth") || f.endsWith(".safetensors"));
     return { folderPath, models: modelFiles };
 });
 
 ipcMain.handle("select-model-file", async () => {
     const result = await dialog.showOpenDialog({
         properties: ["openFile"],
-        filters: [{ name: "Model Files", extensions: ["pth"] }],
+        filters: [{ name: "Model Files", extensions: ["pth", "pt", "safetensors"] }],
     });
     if (result.canceled || !result.filePaths.length) return null;
     return result.filePaths[0];
@@ -237,6 +238,143 @@ ipcMain.handle("select-folder-path", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
     if (result.canceled || !result.filePaths.length) return null;
     return result.filePaths[0];
+});
+
+ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => {
+    const decompress = await import("@xhmikosr/decompress");
+    const decompressTarxz = await import("@felipecrs/decompress-tarxz");
+
+    if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+    }
+    const tempPath = path.join(os.tmpdir(), filename);
+    const file = fs.createWriteStream(tempPath);
+
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            if (res.statusCode !== 200) {
+                fs.unlinkSync(tempPath);
+                return reject(new Error(`Failed to download ${filename}: HTTP ${res.statusCode}`));
+            }
+
+            const total = parseInt(res.headers["content-length"] || "0", 10);
+            let downloaded = 0;
+
+            res.pipe(file);
+
+            res.on("data", (chunk) => {
+                downloaded += chunk.length;
+                const progress = total > 0 ? Math.floor((downloaded / total) * 100) : 0;
+                event.sender.send("download-progress", { filename, progress });
+            });
+
+            file.on("finish", async () => {
+                file.close();
+                try {
+                    if (filename.endsWith(".tar.xz")) {
+                        console.log(`Starting extraction of ${filename} to ${tempPath}`);
+                        const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
+                        fs.mkdirSync(extractDir, { recursive: true });
+
+                        const files = await decompress.default(tempPath, extractDir, {
+                            plugins: [decompressTarxz.default()],
+                            filter: (file) => file.path.endsWith(".pth") || file.path.endsWith(".safetensors"),
+                        });
+                        console.log(`Extracted files: ${files.map(f => f.path).join(", ") || "none"}`);
+
+                        const modelFile = files.find((f) => f.path.endsWith(".pth") || f.path.endsWith(".safetensors"));
+                        if (!modelFile) {
+                            throw new Error(`No valid model file (.pth or .safetensors) found in archive ${filename}`);
+                        }
+
+                        const modelName = filename.replace(".tar.xz", "");
+                        const ext = path.extname(modelFile.path);
+                        const targetPath = path.join(targetDir, `${modelName}${ext}`);
+                        const sourcePath = path.join(extractDir, modelFile.path);
+
+                        if (!fs.existsSync(sourcePath)) {
+                            throw new Error(`Extracted file ${sourcePath} does not exist`);
+                        }
+
+                        console.log(`Moving ${sourcePath} to ${targetPath}`);
+                        fs.renameSync(sourcePath, targetPath);
+
+                        fs.rmSync(extractDir, { recursive: true, force: true });
+                        fs.unlinkSync(tempPath);
+                    } else if (filename.endsWith(".pth") || filename.endsWith(".safetensors")) {
+                        const targetPath = path.join(targetDir, filename);
+                        console.log(`Moving ${tempPath} to ${targetPath}`);
+                        fs.renameSync(tempPath, targetPath);
+                    } else {
+                        throw new Error(`Unsupported file format: ${filename}`);
+                    }
+                    resolve(true);
+                } catch (err) {
+                    console.error(`Error processing ${filename}:`, err);
+                    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                    reject(err);
+                }
+            });
+        }).on("error", (err) => {
+            console.error(`Error downloading ${filename}:`, err);
+            if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+            reject(err);
+        });
+    });
+});
+
+ipcMain.handle("delete-model", async (_event, { folderPath, modelName }) => {
+    const extensions = [".pth", ".safetensors"];
+    let deleted = false;
+    for (const ext of extensions) {
+        const modelPath = path.join(folderPath, `${modelName}${ext}`);
+        if (fs.existsSync(modelPath)) {
+            console.log(`Deleting model: ${modelPath}`);
+            fs.unlinkSync(modelPath);
+            deleted = true;
+        }
+    }
+    if (!deleted) {
+        throw new Error(`Model ${modelName} not found in ${folderPath}`);
+    }
+});
+
+ipcMain.handle("get-models-list", async () => {
+    return new Promise((resolve, reject) => {
+        let data = '';
+        const req = https.get('https://mdb.yor.ovh/v1/files', (res) => {
+            if (res.statusCode !== 200) {
+                console.error(`Failed to fetch models list: status ${res.statusCode}`);
+                reject(new Error(`Failed to fetch models list: status ${res.statusCode}`));
+                return;
+            }
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            res.on('end', () => {
+                try {
+                    const models = JSON.parse(data);
+                    const fixedModels = models.map(model => ({
+                        filename: model.filename,
+                        url: model.url.replace('https:/', 'https://')
+                    }));
+                    resolve(fixedModels);
+                } catch (err) {
+                    console.error('Error parsing models JSON:', err);
+                    reject(new Error('Failed to parse models list.'));
+                }
+            });
+        });
+        req.on('error', (err) => {
+            console.error('Error fetching models list:', err);
+            if (err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' || err.message.includes('network')) {
+                reject(new Error('No internet connection. Please check your network and try again.'));
+            } else {
+                reject(err);
+            }
+        });
+        req.end();
+    });
 });
 
 //JSON

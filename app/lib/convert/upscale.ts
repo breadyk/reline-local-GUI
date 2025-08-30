@@ -18,7 +18,7 @@ export const convertUpscaleToPure: ConvertToPureFunction = (nodes, index) => {
   } else {
     const saved = localStorage.getItem("reline_models")
     const folderPath = saved ? JSON.parse(saved).folderPath : ""
-    const modelPath = folderPath ? `${folderPath}\\${rawModel}.pth` : rawModel
+    const modelPath = folderPath ? `${folderPath}\\${rawModel}` : rawModel
     result.push({
       type: PureNodeType.UPSCALE,
       options: {

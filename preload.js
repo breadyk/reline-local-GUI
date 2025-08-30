@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, shell } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
     selectModelFolder: () => ipcRenderer.invoke("select-model-folder"),
@@ -22,4 +22,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     checkUVPipFreeze: () => ipcRenderer.invoke("check-uv-pip-freeze"),
     openExternal: (url) => ipcRenderer.invoke("open-external", url),
     selectAudioFile: () => ipcRenderer.invoke("select-audio-file"),
+    downloadModel: (args) => ipcRenderer.invoke("download-model", args),
+    deleteModel: (args) => ipcRenderer.invoke("delete-model", args),
+    loadModelsFromFolder: (folderPath) => ipcRenderer.invoke("load-models-from-folder", folderPath),
+    onDownloadProgress: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on("download-progress", listener);
+        return () => ipcRenderer.removeListener("download-progress", listener);
+    },
+    getModelsList: () => ipcRenderer.invoke("get-models-list"),
 });

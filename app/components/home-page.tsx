@@ -11,8 +11,11 @@ import {Play, Square, LoaderCircle, Download, Github, Package} from "lucide-reac
 import { nodesToString, cn } from "~/lib/utils"
 import { Progress } from "~/components/ui/progress"
 import { DependencyManagerModal } from "~/components/dependency-manager-modal"
+import { ModelDownloaderModal } from "~/components/model-downloader-modal";
 import { LogDialog } from "~/components/log-dialog"
 import {ModeToggle} from "~/components/mode-toggle.tsx";
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 
 export default function HomePage() {
     const setModels = useSetModels()
@@ -25,6 +28,11 @@ export default function HomePage() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const isPlayingRef = useRef(false);
     const lastPipelineEndRef = useRef(0);
+    const [showModelDownloader, setShowModelDownloader] = useState(false);
+    const [currentFilePath, setCurrentFilePath] = useState(() => {
+        if (typeof window === "undefined") return ""
+        return localStorage.getItem("reline_current_config") || ""
+    })
 
     const checkDependencies = async () => {
         try {
@@ -203,15 +211,67 @@ export default function HomePage() {
         }
     }
 
+    const handleSave = () => {
+        if (currentFilePath) {
+            window.electronAPI.saveJsonFile(currentFilePath, nodesToString(nodes))
+            toast.success("Saved!")
+
+        } else {
+            handleSaveAs()
+        }
+    }
+
+    const handleSaveAs = async () => {
+        const result = await window.electronAPI.selectSaveJsonFile()
+        if (result) {
+            window.electronAPI.saveJsonFile(result, nodesToString(nodes))
+            setCurrentFilePath(result)
+            toast.success("Saved!")
+
+        }
+    }
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (showLogModal || showInstallModal || showModelDownloader) {
+                return
+            }
+
+            if (event.ctrlKey && (event.key === 's' || event.key === 'ы') && !event.shiftKey) {
+                event.preventDefault()
+                handleSave()
+            }
+
+            if (event.ctrlKey && event.shiftKey && (event.key === 'S' || event.key === 'Ы')) {
+                event.preventDefault()
+                handleSaveAs()
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [showLogModal, showInstallModal, showModelDownloader, currentFilePath, nodes])
+
     return (
         <JsonConfigsProvider>
             <main className="h-screen flex flex-col">
-                <header className="p-5 flex justify-between items-center">
-                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight pl-2">
+                <header className="p-5 pl-5 pr-7 flex justify-between items-center">
+                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">
                         Reline Local GUI
                     </h1>
-                    <div className="flex gap-2 pr-2">
+                    <div className="flex gap-2">
                         <ModeToggle/>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowModelDownloader(true)}
+                            title="Download models"
+                        >
+                            <Download />
+                        </Button>
                         <Button
                             variant="outline"
                             size="icon"
@@ -238,7 +298,7 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                <footer className="p-5">
+                <footer className="p-5 pr-7">
                     <div className="flex justify-between items-center">
                         <div className="flex gap-2 items-center">
                             <Button
@@ -296,7 +356,7 @@ export default function HomePage() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="text-muted-foreground text-sm">v-1.0.0</div>
+                            <div className="text-muted-foreground text-sm">v1.0.0</div>
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -316,7 +376,12 @@ export default function HomePage() {
                     onClose={() => setShowInstallModal(false)}
                     onCloseWithCheck={checkDependencies}
                 />
+                <ModelDownloaderModal
+                    open={showModelDownloader}
+                    onClose={() => setShowModelDownloader(false)}
+                />
             </main>
+            <Toaster position="top-center" duration={2000}/>
         </JsonConfigsProvider>
     )
 }

@@ -27,9 +27,19 @@ function Combobox({ value, onChange }: { value: string; onChange: (value: string
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className={cn("w-full justify-between", isPlaceholder && "text-muted-foreground font-normal")}>
-                    {displayValue}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn(
+                        "w-full grid grid-cols-[1fr_auto] items-center",
+                        isPlaceholder && "text-muted-foreground font-normal"
+                    )}
+                >
+                    <span className="truncate pr-2 text-left">
+                        {displayValue}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0">
