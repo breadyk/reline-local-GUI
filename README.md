@@ -2,6 +2,10 @@
 
 ---
 
+<div align="center">
+  <img src="preview.png" alt="Preview">
+</div>
+
 ## EN
 
 ## Description
@@ -10,70 +14,45 @@
 
 ---
 
-## Features
-
-- Fully offline functionality
-- Instant config execution
-- Clean and responsive user interface
-- Based on the original online configurator
-
----
-
-## TODO:
-
-1. Store model selection for the `upscale` node dropdown in local storage.
-2. Enable saving the generated config to a user-specified path.
-3. Add toggle functionality between:
-    - the JSON config view
-    - the graphical settings panel
-4. Add Python and dependency installation to allow running the processing pipeline locally.
-
----
-
-## Getting Started
+## Building
 Clone this repo, then install the dependencies with<br>
 ```npm install``` <br>
 
-To launch it, run<br>
+Put [UV binaries](https://github.com/astral-sh/uv/releases) for your platform to <br>
+`/reline/uv/(platform name: win | linux | mac)/`
+
+To launch it, run:<br>
 ```npm run go``` <br>
-in projects root.
+
+To build it run: <br>
+```npm run dist``` for Windows<br>
+```npm run distlin``` for Linux<br>
+```npm run distmac``` for MacOS<br>
+
 ---
 
 ## RU
 
 ## Описание
 
-> **Reline Local GUI** — это оффлайн-версия [configurator.yor.ovh](https://configurator.yor.ovh), которая позволяет создавать конфигb и сразу запускать их выполнение в локальной среде.
+> **Reline Local GUI** — это оффлайн-версия [configurator.yor.ovh](https://configurator.yor.ovh), которая позволяет создавать конфиги и сразу запускать их выполнение в локальной среде.
 
 ---
 
-## Возможности
+## Сборка
 
-- Полная автономная работа без интернета
-- Мгновенный запуск сгенерированного конфига
-- Удобный и понятный пользовательский интерфейс
-- Основано на оригинальном онлайн-конфигураторе
-
----
-
-## TODO:
-
-1. Сохранять выбор модели в ноде `upscale` в local storage.
-2. Реализовать сохранение сгенерированного конфига в указанное пользователем место.
-3. Добавить переключение между:
-    - представлением в виде JSON-кода
-    - визуальной карточкой с настройками
-4. Добавить установку Python и необходимых зависимостей для локального запуска обработки.
-
----
-
-## Установка и запуск
-
-Склонируйте репозиторий, затем установите зависимости через<br>
+Склонируйте репозиторий, затем установите зависимости через:<br>
 ```npm install``` <br>
 
-Для запуска, выполните<br>
-```npm run go``` <br>
-в корневой папке проекта.
+Поместите [бинарники UV](https://github.com/astral-sh/uv/releases) для вашей платформы в<br>
+`/reline/uv/(название платформы: win | linux | mac)/`
+
+Для запуска, выполните:<br>
+```npm run go```<br>
+
+Для сборки выполните: <br>
+```npm run dist``` для Windows<br>
+```npm run distlin``` для Linux<br>
+```npm run distmac``` для MacOS<br>
 
 

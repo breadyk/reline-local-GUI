@@ -9,7 +9,6 @@ import {useModels, useSetModels} from "~/context/model-provider";
 import {cn} from "~/lib/utils";
 import { ToastProvider, Toast, ToastTitle, ToastDescription, ToastViewport } from "~/components/ui/toast";
 import {toast} from "sonner";
-import {Toaster} from "~/components/ui/sonner";
 
 export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     const { folderPath, models } = useModels();
@@ -167,7 +166,6 @@ export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose
                     </Button>
                 </div>
             </ModalBase>
-            <Toaster/>
             <ToastViewport />
         </ToastProvider>
     );
