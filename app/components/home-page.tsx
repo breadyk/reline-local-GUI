@@ -147,7 +147,8 @@ export default function HomePage() {
                 if (soundEnabled) {
                     const soundPath = localStorage.getItem("reline_sound_path") || "";
                     const volume = parseInt(localStorage.getItem("reline_sound_volume") || "100", 10);
-                    const audioUrl = soundPath ? `file://${soundPath}` : "/fart.mp3";
+                    const defaultSoundPath = await window.electronAPI.getDefaultSoundPath();
+                    const audioUrl = soundPath ? `file://${soundPath}` : defaultSoundPath;
 
                     if (audioRef.current) {
                         await new Promise(resolve => setTimeout(resolve, 50));

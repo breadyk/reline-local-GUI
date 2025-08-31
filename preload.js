@@ -31,4 +31,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
         return () => ipcRenderer.removeListener("download-progress", listener);
     },
     getModelsList: () => ipcRenderer.invoke("get-models-list"),
+    getDefaultSoundPath: () => ipcRenderer.invoke("get-default-sound-path"),
 });

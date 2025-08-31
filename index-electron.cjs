@@ -447,7 +447,7 @@ ipcMain.handle("stop-python-pipeline", () => {
     }
 });
 
-// Audio file selection
+// Audio
 ipcMain.handle("select-audio-file", async () => {
     const result = await dialog.showOpenDialog({
         properties: ["openFile"],
@@ -455,6 +455,15 @@ ipcMain.handle("select-audio-file", async () => {
     });
     if (result.canceled || !result.filePaths.length) return null;
     return result.filePaths[0];
+});
+
+ipcMain.handle("get-default-sound-path", () => {
+    const isDev = !app.isPackaged;
+    if (isDev) {
+        return "/fart.mp3";
+    } else {
+        return path.join(app.getAppPath(), "dist", "fart.mp3");
+    }
 });
 
 //Other

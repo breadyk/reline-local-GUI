@@ -2,7 +2,6 @@ import React, { useContext, useState, useEffect, useRef } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import {File, FolderOpen, FileJson2, ChevronsUpDown, Check, RotateCcw, Play, Square} from "lucide-react"
 import { nodesToString, stringToNodes } from "~/lib/utils"
-import { useToast } from "~/components/ui/use-toast"
 import { Card, CardHeader, CardContent } from "~/components/ui/card"
 import { NodesActionType } from "~/types/actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
@@ -17,6 +16,8 @@ import { useJsonConfigs, useSetJsonConfigs } from "~/context/json-config-provide
 import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
 import { Checkbox } from "~/components/ui/checkbox"
 import { NumberInput } from "~/components/ui/number-input"
+import {toast} from "sonner"
+import {de} from "zod/dist/types/v4/locales";
 
 const CURRENT_CONFIG_KEY = "reline_current_config";
 const STORAGE_KEY = "reline_nodes";
@@ -77,7 +78,6 @@ export function CodeSection() {
         return localStorage.getItem(CURRENT_CONFIG_KEY) || "";
     });
     const [showNewModal, setShowNewModal] = useState(false)
-    const { toast } = useToast()
     const [soundEnabled, setSoundEnabled] = useState(() => {
         if (typeof window === "undefined") return false;
         return localStorage.getItem("reline_sound_enabled") === "true" || false;
@@ -187,7 +187,7 @@ export function CodeSection() {
     const handleSave = () => {
         if (currentFilePath) {
             window.electronAPI.saveJsonFile(currentFilePath, nodesToString(nodes))
-            toast({ title: "Saved!" })
+            toast.success("Saved!")
         } else {
             handleSaveAs()
         }
@@ -198,7 +198,7 @@ export function CodeSection() {
         if (result) {
             window.electronAPI.saveJsonFile(result, nodesToString(nodes))
             setCurrentFilePath(result)
-            toast({ title: "Saved!" })
+            toast.success("Saved!")
         }
     }
 
@@ -213,7 +213,7 @@ export function CodeSection() {
         setSoundPath("")
     }
 
-    const handlePreview = () => {
+    const handlePreview = async () => {
         if (isPlaying) {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -223,7 +223,8 @@ export function CodeSection() {
             return;
         }
 
-        const soundSrc = soundPath ? `file://${soundPath}` : '/fart.mp3';
+        const defaultSoundPath = await window.electronAPI.getDefaultSoundPath();
+        const soundSrc = soundPath ? `file://${soundPath}` : defaultSoundPath;
         const audio = new Audio(soundSrc);
         audio.volume = volume / 100;
         audio.play().catch((err) => console.error("Audio play error:", err));
