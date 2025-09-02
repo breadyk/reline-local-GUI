@@ -114,9 +114,9 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
     };
 
     const getTorchSize = () =>
-        torchVariant === "cuda" ? "~7 GB" : "~1 GB";
+        torchVariant === "cuda" ? "~5 GB" : "~1 GB";
     const getTotalSize = () =>
-        torchVariant === "cuda" ? "~8.5 GB" : "~1.6 GB";
+        torchVariant === "cuda" ? "~6.5 GB" : "~1.6 GB";
 
     useEffect(() => {
         (async () => {
@@ -210,7 +210,7 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
                             key={dep.id}
                             className={cn(
                                 "border rounded-lg p-4 bg-background transition-colors transition-border duration-200 !animate-none",
-                                installing === dep.id &&
+                                (installing === dep.id || (dep.id === "torch" && installing === "torch-cuda")) &&
                                 "!animate-slow-pulse border-yellow-500",
                                 finishedDep === dep.id &&
                                 "!animate-green-pulse bg-green-100 dark:bg-green-900/30 border-green-500"

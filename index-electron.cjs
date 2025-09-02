@@ -178,7 +178,7 @@ ipcMain.handle("install-dependency", async (event, id) => {
         const pipArgs = ["pip", "install"];
         if (id === "python") {
             log("📦 Installing Python 3.12 + venv...");
-            await runCommand(uvBinaryPath, ["venv", ".venv"], { cwd: relineDir }, log);
+            await runCommand(uvBinaryPath, ["venv", "--python", "3.12", ".venv"], { cwd: relineDir }, log);
             return;
         }
 
