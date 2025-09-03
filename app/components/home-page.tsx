@@ -16,6 +16,7 @@ import { LogDialog } from "~/components/log-dialog"
 import {ModeToggle} from "~/components/mode-toggle.tsx";
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
+import {DiscordLogoIcon} from "@radix-ui/react-icons";
 
 export default function HomePage() {
     const setModels = useSetModels()
@@ -356,8 +357,16 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <div className="text-muted-foreground text-sm">v1.0.0</div>
+                        <div className="flex items-center gap-2">
+                            <div className="text-muted-foreground text-sm">v1.0.1</div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => window.electronAPI.openExternal("https://discord.gg/hEgdaVzTs9")}
+                                title="Discord server"
+                            >
+                                <DiscordLogoIcon/>
+                            </Button>
                             <Button
                                 variant="outline"
                                 size="icon"
