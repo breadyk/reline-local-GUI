@@ -18,16 +18,12 @@
 Clone this repo, then install the dependencies with<br>
 ```npm install``` <br>
 
-Put [UV binaries](https://github.com/astral-sh/uv/releases) for your platform to <br>
-`/reline/uv/(platform name: win | linux | mac)/`
-
 To launch it, run:<br>
 ```npm run go``` <br>
 
 To build it run: <br>
 ```npm run dist``` for Windows<br>
 ```npm run distlin``` for Linux<br>
-```npm run distmac``` for MacOS<br>
 
 ---
 
@@ -44,15 +40,11 @@ To build it run: <br>
 Склонируйте репозиторий, затем установите зависимости через:<br>
 ```npm install``` <br>
 
-Поместите [бинарники UV](https://github.com/astral-sh/uv/releases) для вашей платформы в<br>
-`/reline/uv/(название платформы: win | linux | mac)/`
-
 Для запуска, выполните:<br>
 ```npm run go```<br>
 
 Для сборки выполните: <br>
 ```npm run dist``` для Windows<br>
 ```npm run distlin``` для Linux<br>
-```npm run distmac``` для MacOS<br>
 
 
