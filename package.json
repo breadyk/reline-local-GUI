@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "relin-local-gui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index-electron.cjs",
   "type": "module",
   "scripts": {
@@ -38,6 +38,8 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.1",
     "@xhmikosr/decompress": "^10.2.0",
+    "@xhmikosr/decompress-targz": "^8.1.0",
+    "@xhmikosr/decompress-unzip": "^7.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

@@ -43,19 +43,154 @@ function getPlatformName() {
     throw new Error(`Unsupported platform: ${platform}`);
 }
 
-async function ensureUVBinary() {
-    if (fs.existsSync(uvBinaryPath)) return;
+async function decomp(filename, tempPath, conditions){
+    let extractDir = null;
+    try{
+        const decompress = await import("@xhmikosr/decompress");
+        const decompressTarxz = await import("@felipecrs/decompress-tarxz");
+        const decompressZip = await import("@xhmikosr/decompress-unzip");
+        const decompressTargz = await import("@xhmikosr/decompress-targz");
 
-    const platformName = getPlatformName();
-    const srcPath = path.join(relineDir, "uv", platformName, os.platform() === "win32" ? "uv.exe" : "uv");
+        console.log(`Starting extraction of ${filename} to ${tempPath}`);
+        extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
+        fs.mkdirSync(extractDir, { recursive: true });
 
-    if (!fs.existsSync(srcPath)) {
-        throw new Error(`UV binary not found for platform: ${platformName}`);
+        const extension = path.extname(filename).toLowerCase();
+        const plugins = [];
+        if (extension === ".tar.xz") {
+            plugins.push(decompressTarxz.default());
+        } else if (extension === ".zip") {
+            plugins.push(decompressZip.default());
+        } else if (extension === ".tar.gz") {
+            plugins.push(decompressTargz.default());
+        } else {
+            throw new Error(`Unsupported archive format: ${extension}`);
+        }
+
+        const files = await decompress.default(tempPath, extractDir, {
+            plugins,
+            filter: (file) => conditions(file),
+        });
+        console.log(`Extracted files: ${files.map(f => f.path).join(", ") || "none"}`);
+        return {files, extractDir};
+    }
+    catch(error) {
+        console.error(error);
+        if (extractDir && fs.existsSync(extractDir)) {
+            try {
+                fs.rmSync(extractDir, { recursive: true, force: true });
+            } catch (rmErr) {
+                console.error(`Failed to delete extract dir ${extractDir}:`, rmErr);
+            }
+        }
+        return {files: null, extractDir: null, error};
     }
 
-    if (!fs.existsSync(uvBinDir)) fs.mkdirSync(uvBinDir, { recursive: true });
-    fs.copyFileSync(srcPath, uvBinaryPath);
-    fs.chmodSync(uvBinaryPath, 0o755);
+}
+
+
+async function ensureUVBinary() {
+    if (fs.existsSync(uvBinaryPath)) {
+        console.log("UV binary already exists at", uvBinaryPath);
+        return true;
+    }
+
+    const platformName = getPlatformName();
+    if (platformName === "mac") {
+        throw new Error("macOS is not supported");
+    }
+
+    const filename = platformName === "win" ? "uv-x86_64-pc-windows-msvc.zip" : "uv-x86_64-unknown-linux-gnu.tar.gz";
+    const targetDir = uvBinDir;
+    let url = platformName === "win" ? "https://github.com/astral-sh/uv/releases/download/0.8.14/uv-x86_64-pc-windows-msvc.zip" : "https://github.com/astral-sh/uv/releases/download/0.8.14/uv-x86_64-unknown-linux-gnu.tar.gz";
+
+    if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+    }
+    const tempPath = path.join(os.tmpdir(), filename);
+
+    async function downloadWithRedirect(currentUrl, redirectCount = 0, maxRedirects = 5) {
+        if (redirectCount > maxRedirects) {
+            throw new Error("Too many redirects");
+        }
+
+        console.log(`Downloading ${filename} from ${currentUrl}`);
+        return new Promise((resolve, reject) => {
+            const file = fs.createWriteStream(tempPath);
+            https.get(currentUrl, (res) => {
+                if ([301, 302, 307, 308].includes(res.statusCode)) {
+                    file.close();
+                    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                    const redirectUrl = res.headers.location;
+                    if (!redirectUrl) {
+                        return reject(new Error(`Redirect ${res.statusCode} without location header`));
+                    }
+                    console.log(`Redirecting to ${redirectUrl}`);
+                    return downloadWithRedirect(redirectUrl, redirectCount + 1, maxRedirects)
+                        .then(resolve)
+                        .catch(reject);
+                }
+
+                if (res.statusCode !== 200) {
+                    file.close();
+                    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                    return reject(new Error(`Failed to download UV binaries: HTTP ${res.statusCode}`));
+                }
+
+                res.pipe(file);
+
+                file.on("finish", () => {
+                    file.close();
+                    const stats = fs.statSync(tempPath);
+                    if (stats.size === 0) {
+                        fs.unlinkSync(tempPath);
+                        return reject(new Error("Downloaded file is empty"));
+                    }
+                    resolve();
+                });
+
+                res.on("error", (err) => {
+                    file.close();
+                    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                    reject(err);
+                });
+            }).on("error", (err) => {
+                file.close();
+                if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                reject(err);
+            });
+        });
+    }
+
+    try {
+        await downloadWithRedirect(url);
+        console.log(`Downloaded ${filename} to ${tempPath}`);
+
+        const uvExt = filename.endsWith(".tar.gz") ? "uv" : "uv.exe";
+        const { files, extractDir, error } = await decomp(filename, tempPath, (file) => file.path === uvExt);
+        if (!files || !extractDir) throw new Error(`Failed to decompress: ${error || "Unknown error"}`);
+
+        const targetPath = path.join(targetDir, uvExt);
+        const sourcePath = path.join(extractDir, uvExt);
+
+        if (!fs.existsSync(sourcePath)) {
+            throw new Error(`Extracted file ${sourcePath} does not exist`);
+        }
+
+        console.log(`Moving ${sourcePath} to ${targetPath}`);
+        fs.copyFileSync(sourcePath, targetPath);
+        if (platformName !== "win") fs.chmodSync(targetPath, 0o755);
+        fs.unlinkSync(sourcePath);
+        fs.rmSync(extractDir, { recursive: true, force: true });
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+        console.log("UV binary successfully installed at", targetPath);
+        return true;
+    } catch (err) {
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        console.error(`Error processing ${filename}:`, err);
+        throw err;
+    }
 }
 
 function hasNvidiaGPU() {
@@ -139,8 +274,7 @@ ipcMain.handle("check-uv-pip-freeze", async (event) => {
         if (!fs.existsSync(venvPath)) {
             return { packages: [], error: "Virtual environment not found." };
         }
-        const uv = uvBinaryPath;
-        const output = await runCommand(uv, ["pip", "freeze"], { cwd: relineDir });
+        const output = await runCommand(uvBinaryPath, ["pip", "freeze"], { cwd: relineDir });
         const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
         const packages = cleanOutput
             .split("\n")
@@ -241,8 +375,6 @@ ipcMain.handle("select-folder-path", async () => {
 });
 
 ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => {
-    const decompress = await import("@xhmikosr/decompress");
-    const decompressTarxz = await import("@felipecrs/decompress-tarxz");
 
     if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
@@ -272,15 +404,9 @@ ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => 
                 file.close();
                 try {
                     if (filename.endsWith(".tar.xz")) {
-                        console.log(`Starting extraction of ${filename} to ${tempPath}`);
-                        const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
-                        fs.mkdirSync(extractDir, { recursive: true });
-
-                        const files = await decompress.default(tempPath, extractDir, {
-                            plugins: [decompressTarxz.default()],
-                            filter: (file) => file.path.endsWith(".pth") || file.path.endsWith(".safetensors"),
-                        });
-                        console.log(`Extracted files: ${files.map(f => f.path).join(", ") || "none"}`);
+                        const conditions = (file) => file.path.endsWith(".pth") || file.path.endsWith(".safetensors")
+                        const {files, extractDir, error} = await decomp(filename, tempPath, conditions);
+                        if ((files && extractDir)== null) throw new Error(`Failed to decompress: ${error}`)
 
                         const modelFile = files.find((f) => f.path.endsWith(".pth") || f.path.endsWith(".safetensors"));
                         if (!modelFile) {
@@ -297,14 +423,16 @@ ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => 
                         }
 
                         console.log(`Moving ${sourcePath} to ${targetPath}`);
-                        fs.renameSync(sourcePath, targetPath);
+                        fs.copyFileSync(sourcePath, targetPath);
+                        fs.unlinkSync(sourcePath);
 
                         fs.rmSync(extractDir, { recursive: true, force: true });
                         fs.unlinkSync(tempPath);
                     } else if (filename.endsWith(".pth") || filename.endsWith(".safetensors")) {
                         const targetPath = path.join(targetDir, filename);
                         console.log(`Moving ${tempPath} to ${targetPath}`);
-                        fs.renameSync(tempPath, targetPath);
+                        fs.copyFileSync(tempPath, targetPath);
+                        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
                     } else {
                         throw new Error(`Unsupported file format: ${filename}`);
                     }
@@ -389,8 +517,7 @@ ipcMain.handle("select-json-file", async () => {
 
 ipcMain.handle("load-json-files-from-folder", async (event, folderPath) => {
     if (!fs.existsSync(folderPath)) return null;
-    const jsonFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith(".json"));
-    return jsonFiles;
+    return fs.readdirSync(folderPath).filter((f) => f.endsWith(".json"));
 });
 
 ipcMain.handle("read-json-file", async (event, filePath) => {
