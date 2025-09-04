@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "relin-local-gui",
+  "name": "reline-local-gui",
   "version": "1.0.1",
   "main": "index-electron.cjs",
   "type": "module",
