@@ -55,16 +55,15 @@ async function decomp(filename, tempPath, conditions){
         extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
         fs.mkdirSync(extractDir, { recursive: true });
 
-        const extension = path.extname(filename).toLowerCase();
         const plugins = [];
-        if (extension === ".tar.xz") {
+        if (filename.endsWith(".tar.xz")) {
             plugins.push(decompressTarxz.default());
-        } else if (extension === ".zip") {
+        } else if (filename.endsWith(".zip")) {
             plugins.push(decompressZip.default());
-        } else if (extension === ".tar.gz") {
+        } else if (filename.endsWith(".tar.gz")) {
             plugins.push(decompressTargz.default());
         } else {
-            throw new Error(`Unsupported archive format: ${extension}`);
+            throw new Error("Unsupported archive format");
         }
 
         const files = await decompress.default(tempPath, extractDir, {
