@@ -2,7 +2,7 @@ const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require("electron")
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const https = require("https");
 
 const isDev = !app.isPackaged;
@@ -193,12 +193,19 @@ async function ensureUVBinary() {
 }
 
 function hasNvidiaGPU() {
+
     try {
         if (os.platform() === "win32") {
-            const out = require("child_process").execSync("wmic path win32_VideoController get name").toString();
-            return out.toLowerCase().includes("nvidia");
+            try {
+                const out = execSync("wmic path win32_VideoController get name").toString();
+                return out.toLowerCase().includes("nvidia");
+            } catch {
+                const psCommand = 'Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name';
+                const out = execSync(`powershell -NoProfile -Command "${psCommand}"`).toString();
+                return out.toLowerCase().includes("nvidia");
+            }
         } else if (os.platform() === "linux") {
-            const out = require("child_process").execSync("lspci").toString();
+            const out = execSync("lspci").toString();
             return out.toLowerCase().includes("nvidia");
         } else if (os.platform() === "darwin") {
             return false;
@@ -206,8 +213,10 @@ function hasNvidiaGPU() {
     } catch {
         return false;
     }
+
     return false;
 }
+
 
 function getDirectorySize(dirPath) {
     let total = 0;
