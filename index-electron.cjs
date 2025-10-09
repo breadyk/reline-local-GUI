@@ -246,7 +246,7 @@ const createWindow = () => {
             contextIsolation: true,
         },
     });
-    //Menu.setApplicationMenu(null);
+    Menu.setApplicationMenu(null);
 
     if (isDev) win.loadURL("http://localhost:5173");
     else win.loadFile("./dist/index.html");
