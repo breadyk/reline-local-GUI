@@ -7,7 +7,7 @@ import {Progress} from "~/components/ui/progress";
 import {Input} from "~/components/ui/input";
 import {useModels, useSetModels} from "~/context/model-provider";
 import {cn} from "~/lib/utils";
-import { ToastProvider, Toast, ToastTitle, ToastDescription, ToastViewport } from "~/components/ui/toast";
+import { ToastProvider, ToastViewport } from "~/components/ui/toast";
 import {toast} from "sonner";
 
 export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -58,6 +58,12 @@ export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose
         setProgress(0);
         setIsBusy(true);
         try {
+            if (!folderPath) {
+                toast.error("Select model folder and try again.");
+                setIsBusy(false);
+                setDownloading(null);
+                return;
+            }
             await window.electronAPI.downloadModel({ url, filename, targetDir: folderPath });
             const updated = await window.electronAPI.loadModelsFromFolder(folderPath);
             if (updated) {
