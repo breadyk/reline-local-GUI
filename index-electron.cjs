@@ -383,7 +383,7 @@ ipcMain.handle("select-folder-path", async () => {
 });
 
 ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => {
-
+    console.log("download-model", url, filename, targetDir);
     if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
     }
@@ -605,6 +605,10 @@ ipcMain.handle("get-default-sound-path", () => {
 ipcMain.handle("open-external", async (_event, url) => {
     await shell.openExternal(url);
 });
+
+ipcMain.handle("open-folder", async (_event, folderPath) => {
+    await shell.openPath(folderPath);
+})
 
 // ==== App Lifecycle ====
 app.whenReady().then(() => {

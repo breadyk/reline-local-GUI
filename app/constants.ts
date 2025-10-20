@@ -30,7 +30,7 @@ export const DEFAULT_HALFTONE_DOT_SIZE = 7
 export const DEFAULT_HALFTONE_MODE = HalftoneMode.GRAY
 export const DEFAULT_HALFTONE_SSAA_FILTER = ResizeFilterType.SHAMMING4
 
-export const DEFAULT_CANNY_TYPE = CannyType.NORMAL
+export const DEFAULT_CANNY_TYPE = CannyType.UNSHARP
 
 export const DEFAULT_NODE_OPTIONS: {
   [key in NodeType]: NodeOptions
@@ -45,7 +45,7 @@ export const DEFAULT_NODE_OPTIONS: {
   folder_reader: {
     path: "C:\\raws",
     recursive: true,
-    mode: ReaderNodeMode.DYNAMIC,
+    mode: ReaderNodeMode.RGB,
   },
   folder_writer: {
     path: "C:\\raws\\output",

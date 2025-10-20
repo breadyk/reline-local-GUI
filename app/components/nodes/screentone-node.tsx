@@ -1,17 +1,20 @@
 import {useContext, useEffect} from "react"
-import { NodesContext, NodesDispatchContext } from "~/context/contexts.ts"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import type { ScreentoneNodeOptions } from "~/types/options"
-import { NodesActionType } from "~/types/actions.ts"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select.tsx"
-import { DotType, HalftoneMode, ResizeFilterType } from "~/types/enums.ts"
-import { NumberInput } from "~/components/ui/number-input.tsx"
+import {NodesContext, NodesDispatchContext} from "~/context/contexts.ts"
+import {Label} from "../ui/label"
+import {Input} from "../ui/input"
+import type {ScreentoneNodeOptions} from "~/types/options"
+import {NodesActionType} from "~/types/actions.ts"
+import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "~/components/ui/select.tsx"
+import {DotType, HalftoneMode, ResizeFilterType} from "~/types/enums.ts"
+import {NumberInput} from "~/components/ui/number-input.tsx"
 import {DEFAULT_HALFTONE_SSAA_FILTER} from "~/constants";
 
-export function ScreentoneNodeBody({ id }: { id: number }) {
+export function ScreentoneNodeBody({id}: { id: number }) {
     const nodes = useContext(NodesContext)
-    const node = nodes[id]
+    const node = nodes.find((n) => n.id === id)
+    if (!node) {
+        return null
+    }
     const options = node.options as ScreentoneNodeOptions
     useEffect(() => {
         const needsPatch =
@@ -40,7 +43,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
     const mode = options.halftone_mode
     const channelCount = mode === "cmyk" ? 4 : mode === "rgb" ? 3 : 1
 
-    const ensureArray = <T,>(value: T | T[], length: number, fallback: T): T[] => {
+    const ensureArray = <T, >(value: T | T[], length: number, fallback: T): T[] => {
         if (Array.isArray(value)) return value.length === length ? value : Array(length).fill(fallback)
         return Array(length).fill(value)
     }
@@ -49,7 +52,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
     const angles = ensureArray(options.angle, channelCount, 45)
     const dotTypes = ensureArray(options.dot_type, channelCount, DotType.CIRCLE)
 
-    const updateArrayField = <T,>(
+    const updateArrayField = <T, >(
         key: keyof ScreentoneNodeOptions,
         index: number,
         value: T
@@ -57,7 +60,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
         const current = ensureArray(options[key] as T | T[], channelCount, value)
         const updated = [...current]
         updated[index] = value
-        changeValue({ [key]: updated } as any)
+        changeValue({[key]: updated} as any)
     }
 
     const renderDotOptionsArray = () => {
@@ -71,7 +74,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
                     value={dotTypes[i]}
                 >
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue />
+                        <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
@@ -137,7 +140,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
                     value={options.halftone_mode}
                 >
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue />
+                        <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
@@ -166,7 +169,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
                             value={options.dot_type as DotType}
                         >
                             <SelectTrigger className="w-[180px]">
-                                <SelectValue />
+                                <SelectValue/>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -188,7 +191,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
                             labelText="Angle"
                             value={options.angle as number}
                             onChange={(value) => {
-                                changeValue({ angle: Math.trunc(value) })
+                                changeValue({angle: Math.trunc(value)})
                             }}
                         />
                     </div>
@@ -238,7 +241,7 @@ export function ScreentoneNodeBody({ id }: { id: number }) {
                     value={options.ssaa_filter}
                 >
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue />
+                        <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
