@@ -15,9 +15,8 @@
     "electron": "electron index-electron.cjs",
     "electron-dev": "wait-on http://localhost:5173 && electron index-electron.cjs",
     "go": "concurrently \"npm run dev\" \"npm run electron-dev\"",
-    "dist": "vite build && electron-builder",
-    "distlin": "vite build && electron-builder --linux",
-    "distmac": "vite build && electron-builder --mac"
+    "dist": "vite build && electron-builder --publish never",
+    "distlin": "vite build && electron-builder --linux --publish never"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -107,25 +106,13 @@
     "win": {
       "icon": "public/favicon.ico",
       "target": [
-        "nsis"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true
-    },
-    "mac": {
-      "icon": "public/favicon.icns",
-      "target": [
-        "dmg"
+        "dir"
       ]
     },
     "linux": {
       "icon": "public/favicon.png",
       "target": [
-        "AppImage"
+        "dir"
       ]
     }
   }
