@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react"
+import React, {useEffect, useReducer, useRef, useState} from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import { useSetModels } from "~/context/model-provider"
 import { JsonConfigsProvider } from "~/context/json-config-provider"
@@ -7,7 +7,7 @@ import { DEFAULT_NODES, STORAGE_KEY } from "~/constants"
 import { CodeSection } from "~/components/code-section"
 import { NodesSection } from "~/components/nodes-section"
 import { Button } from "~/components/ui/button"
-import {Play, Square, LoaderCircle, Download, Github, Package} from "lucide-react"
+import {Play, Square, LoaderCircle, Download, Github, Package, Folder} from "lucide-react"
 import { nodesToString, cn } from "~/lib/utils"
 import { Progress } from "~/components/ui/progress"
 import { DependencyManagerModal } from "~/components/dependency-manager-modal"
@@ -17,6 +17,9 @@ import {ModeToggle} from "~/components/mode-toggle.tsx";
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
 import {DiscordLogoIcon} from "@radix-ui/react-icons";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip"
+import {NodeType} from "~/types/enums.ts";
+import {FolderWriterNodeOptions, ResizeNodeOptions} from "~/types/options";
 
 export default function HomePage() {
     const setModels = useSetModels()
@@ -96,6 +99,18 @@ export default function HomePage() {
 
         loadInitialModels();
     }, []);
+
+    const handleExplorerLink = () => {
+        const folderWriterNodes = nodes.filter(node => node.type === NodeType.FOLDER_WRITER);
+        const lastFolderWriter = folderWriterNodes[folderWriterNodes.length - 1];
+        let options = lastFolderWriter.options as FolderWriterNodeOptions;
+
+        if (lastFolderWriter && options.path) {
+            window.electronAPI.openFolder(options.path);
+        } else {
+            console.error("No FolderWriter node found or path is missing");
+        }
+    }
 
     useEffect(() => {
         const handleOutput = (data: string) => {
@@ -259,139 +274,177 @@ export default function HomePage() {
 
     return (
         <JsonConfigsProvider>
-            <main className="h-screen flex flex-col">
-                <header className="p-5 pl-5 pr-7 flex justify-between items-center">
-                    <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-                        Reline Local GUI
-                    </h1>
-                    <div className="flex gap-2">
-                        <ModeToggle/>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setShowModelDownloader(true)}
-                            title="Download models"
-                        >
-                            <Download />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setShowInstallModal(true)}
-                            title="Install dependencies"
-                        >
-                            <Package/>
-                        </Button>
-                    </div>
-                </header>
-
-                <div className="flex-1 overflow-hidden px-5">
-                    <div className="grid grid-cols-2 gap-x-5 h-full">
-                        <NodesContext.Provider value={nodes}>
-                            <NodesDispatchContext.Provider value={dispatch}>
-                                <div className="overflow-y-auto pr-2">
-                                    <NodesSection />
-                                </div>
-                                <div className="overflow-y-auto pr-2">
-                                    <CodeSection />
-                                </div>
-                            </NodesDispatchContext.Provider>
-                        </NodesContext.Provider>
-                    </div>
-                </div>
-
-                <footer className="p-5 pr-7">
-                    <div className="flex justify-between items-center">
-                        <div className="flex gap-2 items-center">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                title={isRunning ? "Running..." : dependenciesInstalled ? "Start Reline" : "Dependencies required"}
-                                className={cn(
-                                    "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
-                                    isRunning &&
-                                    "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
-                                    !dependenciesInstalled && !isRunning &&
-                                    "border-gray-500 text-gray-600 bg-gray-500/10 hover:bg-gray-500/20 opacity-50 cursor-not-allowed"
-                                )}
-                                onClick={handleStart}
-                                disabled={isRunning || !dependenciesInstalled}
-                            >
-                                {isRunning ? (
-                                    <LoaderCircle className="animate-spin" />
-                                ) : (
-                                    <Play className={cn(dependenciesInstalled ? "text-green-600" : "text-gray-600")} />
-                                )}
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                title="Stop Reline"
-                                onClick={handleStop}
-                                disabled={!isRunning}
-                                className={cn(
-                                    "border-neutral-500 text-neutral-500 bg-neutral-500/10 hover:bg-neutral-500/20",
-                                    isRunning &&
-                                    "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20",
-                                )}
-                            >
-                                <Square
-                                    className={cn(isRunning ? "text-red-600" : "text-neutral-500")}
-                                />
-                            </Button>
-
-                            <Progress value={progressPercent} className="h-2 w-48" />
-                            <div className="ml-4 text-sm text-muted-foreground min-w-[200px] truncate">
-                                {progressText}
-                                {progressText === "❌ Error" && (
+            <TooltipProvider delayDuration={300}>
+                <main className="h-screen flex flex-col">
+                    <header className="p-5 pl-5 pr-7 flex justify-between items-center">
+                        <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+                            Reline Local GUI
+                        </h1>
+                        <div className="flex gap-2">
+                            <ModeToggle/>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
                                     <Button
-                                        size="sm"
-                                        variant="link"
-                                        className="text-red-500 underline ml-2"
-                                        onClick={() => setShowLogModal(true)}
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setShowModelDownloader(true)}
                                     >
-                                        Show Logs
+                                        <Download />
                                     </Button>
-                                )}
-                            </div>
-                        </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Download models</p>
+                                </TooltipContent>
+                            </Tooltip>
 
-                        <div className="flex items-center gap-2">
-                            <div className="text-muted-foreground text-sm">v1.0.1</div>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => window.electronAPI.openExternal("https://discord.gg/hEgdaVzTs9")}
-                                title="Discord server"
-                            >
-                                <DiscordLogoIcon/>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => window.electronAPI.openExternal("https://github.com/breadyk/reline-local-GUI")}
-                                title="GitHub"
-                            >
-                                <Github/>
-                            </Button>
-                        </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setShowInstallModal(true)}
+                                    >
+                                        <Package/>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Install dependencies</p>
+                                </TooltipContent>
+                            </Tooltip>
 
+                        </div>
+                    </header>
+
+                    <div className="flex-1 overflow-hidden px-5">
+                        <div className="grid grid-cols-2 gap-x-5 h-full">
+                            <NodesContext.Provider value={nodes}>
+                                <NodesDispatchContext.Provider value={dispatch}>
+                                    <div className="overflow-y-auto pr-2">
+                                        <NodesSection />
+                                    </div>
+                                    <div className="overflow-y-auto pr-2">
+                                        <CodeSection />
+                                    </div>
+                                </NodesDispatchContext.Provider>
+                            </NodesContext.Provider>
+                        </div>
                     </div>
-                </footer>
 
-                <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines}/>
-                <DependencyManagerModal
-                    open={showInstallModal}
-                    onClose={() => setShowInstallModal(false)}
-                    onCloseWithCheck={checkDependencies}
-                />
-                <ModelDownloaderModal
-                    open={showModelDownloader}
-                    onClose={() => setShowModelDownloader(false)}
-                />
-            </main>
-            <Toaster position="top-center" duration={2000}/>
+                    <footer className="p-5 pr-7">
+                        <div className="flex justify-between items-center">
+                            <div className="flex gap-2 items-center">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title={isRunning ? "Running..." : dependenciesInstalled ? "Start Reline" : "Dependencies required"}
+                                    className={cn(
+                                        "border-green-500 text-green-600 bg-green-500/10 hover:bg-green-500/20",
+                                        isRunning &&
+                                        "border-yellow-500 text-yellow-600 bg-yellow-500/10 hover:bg-yellow-500/20 animate-spin-once",
+                                        !dependenciesInstalled && !isRunning &&
+                                        "border-gray-500 text-gray-600 bg-gray-500/10 hover:bg-gray-500/20 opacity-50 cursor-not-allowed"
+                                    )}
+                                    onClick={handleStart}
+                                    disabled={isRunning || !dependenciesInstalled}
+                                >
+                                    {isRunning ? (
+                                        <LoaderCircle className="animate-spin" />
+                                    ) : (
+                                        <Play className={cn(dependenciesInstalled ? "text-green-600" : "text-gray-600")} />
+                                    )}
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Stop Reline"
+                                    onClick={handleStop}
+                                    disabled={!isRunning}
+                                    className={cn(
+                                        "border-neutral-500 text-neutral-500 bg-neutral-500/10 hover:bg-neutral-500/20",
+                                        isRunning &&
+                                        "border-red-500 text-red-600 bg-red-500/10 hover:bg-red-500/20",
+                                    )}
+                                >
+                                    <Square
+                                        className={cn(isRunning ? "text-red-600" : "text-neutral-500")}
+                                    />
+                                </Button>
+
+                                <Progress value={progressPercent} className="h-2 w-48" />
+                                <div className="ml-4 text-sm text-muted-foreground min-w-[200px] truncate">
+                                    {progressText}
+                                    {progressText === "❌ Error" && (
+                                        <Button
+                                            size="sm"
+                                            variant="link"
+                                            className="text-red-500 underline ml-2"
+                                            onClick={() => setShowLogModal(true)}
+                                        >
+                                            Show Logs
+                                        </Button>
+                                    )}
+                                    {progressText === "✅ Complete" && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="ml-2"
+                                            onClick={() => handleExplorerLink()}
+                                        >
+                                            <Folder/>Open in Explorer
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="text-muted-foreground text-sm">v1.1.0</div>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => window.electronAPI.openExternal("https://discord.gg/hEgdaVzTs9")}
+                                        >
+                                            <DiscordLogoIcon/>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="text-center">
+                                        <p>Discord server</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => window.electronAPI.openExternal("https://github.com/breadyk/reline-local-GUI")}
+                                        >
+                                            <Github/>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>GitHub</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+
+                        </div>
+                    </footer>
+
+                    <LogDialog open={showLogModal} onClose={() => setShowLogModal(false)} logLines={logLines}/>
+                    <DependencyManagerModal
+                        open={showInstallModal}
+                        onClose={() => setShowInstallModal(false)}
+                        onCloseWithCheck={checkDependencies}
+                    />
+                    <ModelDownloaderModal
+                        open={showModelDownloader}
+                        onClose={() => setShowModelDownloader(false)}
+                    />
+                </main>
+                <Toaster position="top-center" duration={2000}/>
+            </TooltipProvider>
         </JsonConfigsProvider>
     )
 }
