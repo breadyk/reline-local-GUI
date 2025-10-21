@@ -1,0 +1,78 @@
+name: Manual Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag for release (e.g. v1.0.0)"
+        required: true
+      release_notes:
+        description: "Release notes"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: |
+          if [ "${{ matrix.os }}" == "Windows_NT" ]; then
+            npm run dist
+          else
+            npm run distlin
+          fi
+        shell: bash
+
+      - name: Archive build
+        run: |
+          mkdir -p artifacts
+          if [ "${{ matrix.os }}" == "Windows_NT" ]; then
+            cd releases/win-unpacked
+            zip -r ../../artifacts/reline-win.zip .
+          else
+            cd releases/linux-unpacked
+            zip -r ../../artifacts/reline-linux.zip .
+          fi
+        shell: bash
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: artifacts/*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          name: Release ${{ github.event.inputs.release_tag }}
+          body: ${{ github.event.inputs.release_notes }}
+          files: dist/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
