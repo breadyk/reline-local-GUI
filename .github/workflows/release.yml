@@ -47,16 +47,19 @@ jobs:
         shell: bash
 
       - name: Archive build
+        if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            cd release/win-unpacked
-            zip -r ../../artifacts/reline-gui-win.zip .
-          else
-            cd release/linux-unpacked
-            zip -r ../../artifacts/reline-gui-linux.zip .
-          fi
+          cd release/linux-unpacked
+          zip -r ../../artifacts/reline-gui-linux.zip .
         shell: bash
+
+      - name: Archive build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          if (-not (Test-Path artifacts)) { New-Item -ItemType Directory -Path artifacts }
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath artifacts/reline-gui-win.zip
+        shell: pwsh
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
