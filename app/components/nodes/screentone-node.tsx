@@ -217,6 +217,8 @@ export function ScreentoneNodeBody({id}: { id: number }) {
                 <Label>SSAA Scale</Label>
                 <Input
                     type="number"
+                    min={1}
+                    max={16}
                     className="w-[180px]"
                     step="0.1"
                     placeholder="None"
