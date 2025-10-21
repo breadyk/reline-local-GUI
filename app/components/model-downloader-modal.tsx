@@ -105,7 +105,7 @@ export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose
     return (
         <ToastProvider>
             <ModalBase open={open} onClose={handleClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <div className="px-4 py-3 border-b border-border bg-zinc-100 dark:bg-zinc-800 flex justify-between items-center">
+                <div className="px-4 py-3 border-b border-border flex justify-between items-center">
                     <h2 className="text-lg font-semibold">Download models</h2>
                     <Button variant="ghost" size="icon" onClick={handleClose} disabled={isBusy}>
                         <X />
@@ -166,7 +166,7 @@ export function ModelDownloaderModal({ open, onClose }: { open: boolean; onClose
                         </div>
                     </ScrollArea>
                 </div>
-                <div className="px-4 py-3 border-t border-border bg-zinc-100 dark:bg-zinc-800 flex justify-end">
+                <div className="px-4 py-3 border-t border-border flex justify-end">
                     <Button variant="outline" onClick={handleClose} disabled={isBusy}>
                         Close
                     </Button>

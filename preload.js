@@ -33,4 +33,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     getModelsList: () => ipcRenderer.invoke("get-models-list"),
     getDefaultSoundPath: () => ipcRenderer.invoke("get-default-sound-path"),
+    checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+    installUpdates: () => ipcRenderer.invoke("install-updates"),
 });

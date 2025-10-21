@@ -298,6 +298,48 @@ ipcMain.handle("check-uv-pip-freeze", async (event) => {
     }
 });
 
+ipcMain.handle("check-for-updates", async (event) => {
+    try {
+        const venvPath = path.join(relineDir, ".venv");
+        if (!fs.existsSync(venvPath)) {
+            return { updatesAvailable: false };
+        }
+        let output = "";
+        await runCommand(uvBinaryPath, ["pip", "list", "--outdated"], { cwd: relineDir }, (data) => {
+            output += data;
+        });
+        const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
+        const updatesAvailable = cleanOutput
+            .split("\n")
+            .slice(2)
+            .some(line => line.includes("reline") || line.includes("resselt"));
+        return { updatesAvailable };
+    } catch (err) {
+        if (err.message.includes("ENOTFOUND") || err.message.includes("ETIMEDOUT") || err.message.includes("network")) {
+            throw new Error("No internet connection");
+        }
+        throw err;
+    }
+});
+
+ipcMain.handle("install-updates", async (event) => {
+    const log = (data) => event.sender.send("pipeline-output", data);
+    try {
+        log("📦 Updating...");
+        console.log("Installing:", ["pip", "install", "--upgrade", "reline", "resselt[cu126]"]);
+        await runCommand(uvBinaryPath, [
+            "pip", "install", "--upgrade",
+            "--index-url", "https://pypi.org/simple",
+            "--extra-index-url", "https://download.pytorch.org/whl/cu126",
+            "reline", "resselt[cu126]"
+        ], { cwd: relineDir }, log);
+        log("✅ Updates installed successfully");
+    } catch (err) {
+        log(`❌ Error updating packages: ${err.message}`);
+        throw err;
+    }
+});
+
 // Venv Management
 ipcMain.handle("delete-venv", async () => {
     const venvPath = path.join(relineDir, ".venv");

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
-import { X, LoaderCircle, Trash, Download } from "lucide-react";
+import { X, LoaderCircle, Trash, Download, RefreshCw, CloudDownload } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
     Select,
@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/select";
 import { ModalBase } from "~/components/ui/modal-base";
 import { PipFreezeModal } from "~/components/pip-freeze-modal";
+import { toast } from "sonner";
 
 const DEPENDENCIES = [
     {
@@ -59,6 +60,9 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
     const [deleting, setDeleting] = useState(false);
     const [showPipFreeze, setShowPipFreeze] = useState(false);
     const [pipFreezeData, setPipFreezeData] = useState<{ packages: { name: string; version: string }[], error: string | null }>({ packages: [], error: null });
+    const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+    const [isInstallingUpdates, setIsInstallingUpdates] = useState(false);
+    const [updateAvailable, setUpdateAvailable] = useState(false);
 
     const handleInstall = async (id: string) => {
         console.log(`Starting install for ${id}`);
@@ -147,49 +151,104 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
         }
     };
 
+    const handleCheckUpdates = async () => {
+        setIsCheckingUpdates(true);
+        try {
+            const result = await window.electronAPI.checkForUpdates();
+            if (result.updatesAvailable) {
+                setUpdateAvailable(true);
+                toast.success("Updates available.");
+            } else {
+                toast.success("Up to date!");
+            }
+        } catch (err) {
+            toast.error("No internet connection");
+        } finally {
+            setIsCheckingUpdates(false);
+        }
+    };
+
+    const handleInstallUpdates = async () => {
+        setIsInstallingUpdates(true);
+        try {
+            await window.electronAPI.installUpdates();
+            setUpdateAvailable(false);
+            toast.success("Packages updated!");
+            const size = await window.electronAPI.getVenvSize();
+            setVenvSize(size);
+        } catch (err) {
+            toast.error("Failed to install updates");
+        } finally {
+            setIsInstallingUpdates(false);
+        }
+    };
+
     return (
         <>
             <ModalBase open={open} onClose={handleClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <div className="px-4 py-3 border-b border-border bg-zinc-100 dark:bg-zinc-800 flex justify-between items-center">
+                <div className="px-4 py-3 border-b border-border flex justify-between items-center">
                     <h2 className="text-lg font-semibold">Dependency Manager</h2>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={handleClose}
-                        disabled={!!installing || installingAll || deleting}
+                        disabled={!!installing || installingAll || deleting || isInstallingUpdates}
                     >
                         <X />
                     </Button>
                 </div>
 
-                <div className="px-4 py-3 border-b border-border bg-zinc-50 dark:bg-zinc-800 flex justify-between items-center">
+                <div className="px-4 py-3 border-b border-border flex justify-between items-center">
                     <h3 className="font-medium text-base">Packages</h3>
-                    <Button
-                        disabled={!!installing || installingAll || deleting}
-                        onClick={installed ? handleDelete : installAll}
-                        className={cn(
-                            "flex items-center gap-2 w-[170px] justify-center text-white",
-                            installed
-                                ? deleting
-                                    ? "bg-yellow-500"
-                                    : "bg-red-600 hover:bg-red-700"
-                                : installingAll
-                                    ? "bg-yellow-500"
-                                    : "bg-green-600 hover:bg-green-700"
-                        )}
-                    >
-                        {installed ? (
-                            deleting ? (
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isCheckingUpdates || isInstallingUpdates || installing || installingAll || deleting || !installed}
+                            onClick={updateAvailable ? handleInstallUpdates : handleCheckUpdates}
+                        >
+                            {isCheckingUpdates || isInstallingUpdates ? (
+                                <LoaderCircle className="w-4 h-4 animate-spin" />
+                            ) : updateAvailable ? (
+                                <CloudDownload className="w-4 h-4" />
+                            ) : (
+                                <RefreshCw className="w-4 h-4" />
+                            )}
+                            {isCheckingUpdates
+                                ? "Checking..."
+                                : isInstallingUpdates
+                                    ? "Installing..."
+                                    : updateAvailable
+                                        ? "Install updates"
+                                        : "Check for updates"}
+                        </Button>
+                        <Button
+                            size="sm"
+                            disabled={!!installing || installingAll || deleting}
+                            onClick={installed ? handleDelete : installAll}
+                            className={cn(
+                                "flex items-center gap-2 justify-center text-white",
+                                installed
+                                    ? deleting
+                                        ? "bg-yellow-500"
+                                        : "bg-red-600 hover:bg-red-700"
+                                    : installingAll
+                                        ? "bg-yellow-500"
+                                        : "bg-green-600 hover:bg-green-700"
+                            )}
+                        >
+                            {installed ? (
+                                deleting ? (
+                                    <LoaderCircle className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Trash className="w-4 h-4" />
+                                )
+                            ) : installingAll ? (
                                 <LoaderCircle className="w-4 h-4 animate-spin" />
                             ) : (
-                                <Trash className="w-4 h-4" />
-                            )
-                        ) : installingAll ? (
-                            <LoaderCircle className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Download className="w-4 h-4" />
-                        )}
-                        <span>
+                                <Download className="w-4 h-4" />
+                            )}
+                            <span>
                             {installed
                                 ? deleting
                                     ? "Deleting..."
@@ -198,10 +257,12 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
                                     ? "Installing..."
                                     : "Install all"}
                         </span>
-                        <span className="ml-auto text-xs text-white/80">
+                            <span className="ml-auto text-xs text-white/80">
                             {installed ? formatSize(venvSize) : getTotalSize()}
                         </span>
-                    </Button>
+                        </Button>
+                    </div>
+
                 </div>
 
                 <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -231,7 +292,7 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
                                         <Select
                                             value={torchVariant}
                                             onValueChange={setTorchVariant}
-                                            disabled={!gpuSupported || !!installing || installingAll}
+                                            disabled={!gpuSupported || !!installing || installingAll || installed}
                                         >
                                             <SelectTrigger className="w-28 h-8 text-xs">
                                                 <SelectValue placeholder="Select" />
@@ -252,7 +313,7 @@ export function DependencyManagerModal({ open, onClose, onCloseWithCheck }: {
                     ))}
                 </div>
 
-                <div className="px-4 py-3 border-t border-border bg-zinc-100 dark:bg-zinc-800 flex justify-between">
+                <div className="px-4 py-3 border-t border-border flex justify-between">
                     <div className="space-x-2">
                         <Button
                             variant="outline"
