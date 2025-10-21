@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     checkGPU: () => ipcRenderer.invoke("check-gpu"),
     checkUVPipFreeze: () => ipcRenderer.invoke("check-uv-pip-freeze"),
     openExternal: (url) => ipcRenderer.invoke("open-external", url),
+    openFolder: (folderPath) => ipcRenderer.invoke("open-folder", folderPath),
     selectAudioFile: () => ipcRenderer.invoke("select-audio-file"),
     downloadModel: (args) => ipcRenderer.invoke("download-model", args),
     deleteModel: (args) => ipcRenderer.invoke("delete-model", args),
@@ -32,4 +33,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     getModelsList: () => ipcRenderer.invoke("get-models-list"),
     getDefaultSoundPath: () => ipcRenderer.invoke("get-default-sound-path"),
+    checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+    installUpdates: () => ipcRenderer.invoke("install-updates"),
 });

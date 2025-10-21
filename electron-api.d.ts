@@ -63,6 +63,7 @@ declare global {
 
             // === Audio ===
             selectAudioFile: () => Promise<string | null>;
+            getDefaultSoundPath: () => Promise<string | null>;
 
             // === Events ===
             onPipelineOutput: (cb: (data: string) => void) => void;
@@ -76,6 +77,7 @@ declare global {
 
             // === Other ===
             openExternal: (url: string) => void;
+            openFolder: (folderPath: string) => void;
         };
     }
 }

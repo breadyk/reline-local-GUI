@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from "react"
 import { NodesContext, NodesDispatchContext } from "~/context/contexts"
 import {File, FolderOpen, FileJson2, ChevronsUpDown, Check, RotateCcw, Play, Square} from "lucide-react"
-import { nodesToString, stringToNodes } from "~/lib/utils"
+import {nodesToString, remapNodeIds, stringToNodes} from "~/lib/utils"
 import { Card, CardHeader, CardContent } from "~/components/ui/card"
 import { NodesActionType } from "~/types/actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
@@ -17,7 +17,7 @@ import {ScrollArea, ScrollBar} from "~/components/ui/scroll-area"
 import { Checkbox } from "~/components/ui/checkbox"
 import { NumberInput } from "~/components/ui/number-input"
 import {toast} from "sonner"
-import {de} from "zod/dist/types/v4/locales";
+import { migrateNodes } from "~/lib/config-migration";
 
 const CURRENT_CONFIG_KEY = "reline_current_config";
 const STORAGE_KEY = "reline_nodes";
@@ -107,9 +107,12 @@ export function CodeSection() {
                 try {
                     const text = await window.electronAPI.readJsonFile(currentFilePath);
                     if (text) {
+                        const parsedNodes = stringToNodes(text);
+                        const migratedNodes = migrateNodes(parsedNodes);
+                        const remappedNodes = remapNodeIds(migratedNodes);
                         dispatch({
                             type: NodesActionType.IMPORT,
-                            payload: stringToNodes(text),
+                            payload: remappedNodes,
                         });
                     } else {
                         throw new Error("File not found");
@@ -121,18 +124,22 @@ export function CodeSection() {
 
                     const unsaved = localStorage.getItem(STORAGE_KEY);
                     if (unsaved) {
+                        const parsedUnsaved = JSON.parse(unsaved);
+                        const remappedUnsaved = remapNodeIds(parsedUnsaved);
                         dispatch({
                             type: NodesActionType.IMPORT,
-                            payload: JSON.parse(unsaved),
+                            payload: remappedUnsaved,
                         });
                     }
                 }
             } else {
                 const unsaved = localStorage.getItem(STORAGE_KEY);
                 if (unsaved) {
+                    const parsedUnsaved = JSON.parse(unsaved);
+                    const remappedUnsaved = remapNodeIds(parsedUnsaved);
                     dispatch({
                         type: NodesActionType.IMPORT,
-                        payload: JSON.parse(unsaved),
+                        payload: remappedUnsaved,
                     });
                 }
             }
@@ -164,9 +171,12 @@ export function CodeSection() {
     const handleSelectConfig = (value: string) => {
         const fullPath = `${folderPath}/${value}`
         window.electronAPI.readJsonFile(fullPath).then((text) => {
+            const parsedNodes = stringToNodes(text);
+            const migratedNodes = migrateNodes(parsedNodes);
+            const remappedNodes = remapNodeIds(migratedNodes);
             dispatch({
                 type: NodesActionType.IMPORT,
-                payload: stringToNodes(text),
+                payload: remappedNodes,
             })
             setCurrentFilePath(fullPath)
         })
@@ -176,9 +186,12 @@ export function CodeSection() {
         const result = await window.electronAPI.selectJsonFile()
         if (result) {
             const text = await window.electronAPI.readJsonFile(result)
+            const parsedNodes = stringToNodes(text);
+            const migratedNodes = migrateNodes(parsedNodes);
+            const remappedNodes = remapNodeIds(migratedNodes);
             dispatch({
                 type: NodesActionType.IMPORT,
-                payload: stringToNodes(text),
+                payload: remappedNodes,
             })
             setCurrentFilePath(result)
         }
@@ -248,7 +261,7 @@ export function CodeSection() {
     return (
         <>
             <Card className="h-full flex flex-col overflow-hidden">
-                <Tabs defaultValue="code" className="flex flex-col h-full">
+                <Tabs defaultValue="code" className="flex flex-col flex-1 overflow-hidden">
                     <CardHeader>
                         <div className="flex items-center gap-4">
                             <TabsList className="grid grid-cols-2 w-1/2">
@@ -273,10 +286,10 @@ export function CodeSection() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="overflow-hidden">
+                    <CardContent className="relative flex-1 overflow-hidden">
 
-                        <TabsContent value="code" className="h-full m-0 rounded-lg">
-                            <ScrollArea className="h-full w-full rounded-md border">
+                        <TabsContent value="code" className="absolute h-full w-full pb-6 pr-12 m-0 rounded-lg flex">
+                            <ScrollArea className="h-full w-full rounded-md border flex">
                                 <div className="p-4">
                                     <pre>{nodesToString(nodes)}</pre>
                                 </div>
@@ -284,8 +297,8 @@ export function CodeSection() {
                                 <ScrollBar orientation="horizontal"/>
                             </ScrollArea>
                         </TabsContent>
-                        <TabsContent value="options" className="h-full flex flex-col gap-4 m-0">
-                            <ScrollArea className="h-screen w-full rounded-md border">
+                        <TabsContent value="options" className="h-full flex flex-col gap-4 m-0 overflow-hidden">
+                            <ScrollArea className="flex-1 w-full rounded-md border">
                             <div className="p-4 flex flex-col gap-4 m-0">
                                     <Label>Default config folder</Label>
                                     <div className="flex items-center gap-2">

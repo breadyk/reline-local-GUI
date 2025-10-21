@@ -2,7 +2,7 @@ const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require("electron")
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const https = require("https");
 
 const isDev = !app.isPackaged;
@@ -193,12 +193,19 @@ async function ensureUVBinary() {
 }
 
 function hasNvidiaGPU() {
+
     try {
         if (os.platform() === "win32") {
-            const out = require("child_process").execSync("wmic path win32_VideoController get name").toString();
-            return out.toLowerCase().includes("nvidia");
+            try {
+                const out = execSync("wmic path win32_VideoController get name").toString();
+                return out.toLowerCase().includes("nvidia");
+            } catch {
+                const psCommand = 'Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name';
+                const out = execSync(`powershell -NoProfile -Command "${psCommand}"`).toString();
+                return out.toLowerCase().includes("nvidia");
+            }
         } else if (os.platform() === "linux") {
-            const out = require("child_process").execSync("lspci").toString();
+            const out = execSync("lspci").toString();
             return out.toLowerCase().includes("nvidia");
         } else if (os.platform() === "darwin") {
             return false;
@@ -206,8 +213,10 @@ function hasNvidiaGPU() {
     } catch {
         return false;
     }
+
     return false;
 }
+
 
 function getDirectorySize(dirPath) {
     let total = 0;
@@ -286,6 +295,48 @@ ipcMain.handle("check-uv-pip-freeze", async (event) => {
         return { packages, error: null };
     } catch (err) {
         return { packages: [], error: err.message };
+    }
+});
+
+ipcMain.handle("check-for-updates", async (event) => {
+    try {
+        const venvPath = path.join(relineDir, ".venv");
+        if (!fs.existsSync(venvPath)) {
+            return { updatesAvailable: false };
+        }
+        let output = "";
+        await runCommand(uvBinaryPath, ["pip", "list", "--outdated"], { cwd: relineDir }, (data) => {
+            output += data;
+        });
+        const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
+        const updatesAvailable = cleanOutput
+            .split("\n")
+            .slice(2)
+            .some(line => line.includes("reline") || line.includes("resselt"));
+        return { updatesAvailable };
+    } catch (err) {
+        if (err.message.includes("ENOTFOUND") || err.message.includes("ETIMEDOUT") || err.message.includes("network")) {
+            throw new Error("No internet connection");
+        }
+        throw err;
+    }
+});
+
+ipcMain.handle("install-updates", async (event) => {
+    const log = (data) => event.sender.send("pipeline-output", data);
+    try {
+        log("📦 Updating...");
+        console.log("Installing:", ["pip", "install", "--upgrade", "reline", "resselt[cu126]"]);
+        await runCommand(uvBinaryPath, [
+            "pip", "install", "--upgrade",
+            "--index-url", "https://pypi.org/simple",
+            "--extra-index-url", "https://download.pytorch.org/whl/cu126",
+            "reline", "resselt[cu126]"
+        ], { cwd: relineDir }, log);
+        log("✅ Updates installed successfully");
+    } catch (err) {
+        log(`❌ Error updating packages: ${err.message}`);
+        throw err;
     }
 });
 
@@ -374,7 +425,7 @@ ipcMain.handle("select-folder-path", async () => {
 });
 
 ipcMain.handle("download-model", async (event, { url, filename, targetDir }) => {
-
+    console.log("download-model", url, filename, targetDir);
     if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
     }
@@ -596,6 +647,10 @@ ipcMain.handle("get-default-sound-path", () => {
 ipcMain.handle("open-external", async (_event, url) => {
     await shell.openExternal(url);
 });
+
+ipcMain.handle("open-folder", async (_event, folderPath) => {
+    await shell.openPath(folderPath);
+})
 
 // ==== App Lifecycle ====
 app.whenReady().then(() => {
